@@ -1,0 +1,9 @@
+examples/
+notebooks/
+scripts.sh
+dist/
+config_ai.egg-info/
+__pycache__
+*.ipynb
+.idea/
+.ipynb_checkpoints
