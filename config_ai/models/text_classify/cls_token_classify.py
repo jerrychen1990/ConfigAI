@@ -41,7 +41,7 @@ from snippets.decorators import log_cost_time, discard_kwarg
 
 logger = logging.getLogger(__name__)
 
-class CLSTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
+class CLSTokenClassifyModel(AbstractTextClassifyModel, TFBasedModel):
 
     def _load_config(self, config):
         super()._load_config(config)

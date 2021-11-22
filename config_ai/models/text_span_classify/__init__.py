@@ -11,6 +11,6 @@
 -------------------------------------------------
 """
 from config_ai.models.text_span_classify.common import AbstractTextSpanClassifyModelAIConfig
-from config_ai.models.text_span_classify.tf_seq_labeling import TFSeqLabelingModel
-from config_ai.models.text_span_classify.tf_global_pointer import TFGlobalPointerModel
+from config_ai.models.text_span_classify.seq_labeling import SeqLabelingModel
+# from config_ai.models.text_span_classify.tf_global_pointer import TFGlobalPointerModel
 

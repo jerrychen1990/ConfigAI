@@ -12,5 +12,5 @@
 """
 
 from config_ai.models.text_classify.common import AbstractTextClassifyModel
-from config_ai.models.text_classify.cls_classify import CLSTextClassifyModel
+from config_ai.models.text_classify.cls_token_classify import CLSTokenClassifyModel
 # from config_ai.models.text_classify.tf_mlm_text_classify import TFMLMTextClassifyModel

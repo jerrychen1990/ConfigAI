@@ -68,6 +68,7 @@ def set_tf_config():
     tf.config.set_soft_device_placement(True)
     # logger.info("disabling eager mode...")
     # tf.compat.v1.disable_eager_execution()
+    logger.info("set tf config done")
 
 
 def set_random_seed(seed):

@@ -14,12 +14,13 @@ import logging
 from typing import Dict, List
 
 import tensorflow as tf
-from ai_schema import LabeledTextSpanClassifyExample, TextSpans, TextSpan
 from bert4keras.layers import ConditionalRandomField as CRF
 from tensorflow.keras.activations import sigmoid, softmax
 from tensorflow.keras.initializers import TruncatedNormal
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
+from snippets import seq2dict, log_cost_time, discard_kwarg
+
 
 from config_ai.data_utils import truncate_record
 from config_ai.losses import build_classify_loss_layer
@@ -28,15 +29,15 @@ from config_ai.models.text_span_classify.common import SeqLabelStrategy, read_se
     get_overlap_token_label_sequence, \
     get_token_label_sequence, token_label2classify_label_input, AbstractTextSpanClassifyModelAIConfig, \
     tensor2labels, decode_overlap_label_sequence, decode_label_sequence, UnionTextSpanClassifyExample
+from config_ai.schema import LabeledTextSpanClassifyExample, TextSpans, TextSpan
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_sequence_encoder_model
 from config_ai.optimizers import OptimizerFactory
-from config_ai.utils import seq2dict, log_cost_time, discard_kwarg
 
 logger = logging.getLogger(__name__)
 
 
-class TFSeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
+class SeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
 
     def _load_config(self, config):
         super()._load_config(config)
@@ -102,7 +103,7 @@ class TFSeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         loss_mask = Lambda(function=lambda x: tf.cast(tf.not_equal(x, 0), tf.float32), name="pred_mask")(token_ids)
 
         # 计算loss的时候，过滤掉pad token的loss
-        loss_layer = build_classify_loss_layer(multi_label=self.multi_label)
+        loss_layer = build_classify_loss_layer(multi_label=self.multi_label, with_mask=True)
         loss = loss_layer([classify_labels, output, loss_mask])
         self.train_model.add_loss(loss)
 
@@ -119,9 +120,9 @@ class TFSeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         self._update_model_dict("train", self.train_model)
 
     def _example2feature(self, example: UnionTextSpanClassifyExample) -> Dict:
-        feature = self.tokenizer.do_tokenize(text=example.text, extra_text=example.extra_text, store_map=True)
+        feature = self.tokenizer.do_tokenize(text=example.text, store_map=True)
         if isinstance(example, LabeledTextSpanClassifyExample):
-            feature.update(text_spans=[e.dict() for e in example.label])
+            feature.update(text_spans=[e.dict(exclude_none=True) for e in example.text_spans])
         return feature
 
     def _feature2records(self, idx, feature: Dict, mode: str) -> List[Dict]:

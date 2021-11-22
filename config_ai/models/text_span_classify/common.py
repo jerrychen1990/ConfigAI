@@ -12,17 +12,19 @@
 """
 
 import logging
+from abc import ABC
 from enum import Enum, unique
 from typing import List, Tuple, Set, Dict
+from snippets import load_lines
 
 import tensorflow as tf
-from ai_schema import TextSpanClassifyExample, LabeledTextSpanClassifyExample, TextSpan, TextSpans, UnionTextSpanClassifyExample
-from ai_schema.eval import get_tp_fp_fn_set
+from config_ai.schema import TextSpanClassifyExample, LabeledTextSpanClassifyExample, TextSpan, TextSpans, \
+    UnionTextSpanClassifyExample
 
 from config_ai.backend import apply_threshold, n_hot2idx_tensor
 from config_ai.models.core import AIConfigBaseModel
 from config_ai.models.text_classify.common import multi_label2id_vector
-from config_ai.utils import load_lines
+from config_ai.evaluate import get_tp_fp_fn_set
 
 logger = logging.getLogger(__name__)
 LABEL_SEP = "_"
@@ -60,6 +62,7 @@ class SeqLabelStrategy(Enum):
 
     def get_end(self):
         return self.end if self.end else self.mid
+
 
 # 将label_type和label_part组合成一个token_label。比如"B"+"人物",编码得到"B_人物"
 def encode_label(label_part: str, label_type: str, seq_label_strategy: SeqLabelStrategy) -> str:
@@ -284,7 +287,8 @@ def get_token_label_sequence(token_list, target_list: TextSpans, char2token, seq
 
 
 # 给定token list以及重叠的char级别的span信息，得到token级别的标注结果
-def get_overlap_token_label_sequence(token_list, target_list: TextSpans, char2token, seq_label_strategy: SeqLabelStrategy):
+def get_overlap_token_label_sequence(token_list, target_list: TextSpans, char2token,
+                                     seq_label_strategy: SeqLabelStrategy):
     tokens_label_sequence = [set() for _ in range(len(token_list))]
     for text_span in target_list:
         text, label, (start, end) = text_span.text, text_span.label, text_span.span
@@ -336,22 +340,8 @@ def tensor2labels(tensor, multi_label, id2label, threshold=.5) -> List[Tuple[str
 
 
 def get_unique_text_span(text_span: TextSpan):
-    return (text_span.text, text_span.label, text_span.span)
+    return text_span.text, text_span.label, text_span.span
 
-# 将sequence labeling结果输出
-def get_text_span_classify_output(examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]):
-    output = []
-    for example, pred in zip(examples, preds):
-        rs_item = example.dict()
-        rs_item.update(predict=pred)
-        if isinstance(example, LabeledTextSpanClassifyExample):
-            true_set = set([get_unique_text_span(s) for s in example.label])
-            pred_set = set([get_unique_text_span(s) for s in pred])
-
-            tp_set, fp_set, fn_set = get_tp_fp_fn_set(true_set, pred_set)
-            rs_item.update(tp_set=tp_set, fp_set=fp_set, fn_set=fn_set)
-        output.append(rs_item)
-    return output
 
 
 # 将token_label编码成分类的vector形式
@@ -362,6 +352,24 @@ def token_label2classify_label_input(target_token_label_sequence, multi_label, l
         classify_label_input = [label2id[e] for e in target_token_label_sequence]
 
     return classify_label_input
+
+# 将sequence labeling结果输出
+def get_text_span_classify_output(examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]):
+    output = []
+    for example, pred in zip(examples, preds):
+        rs_item = example.dict(exclude_none=True)
+        rs_item.update(predict=pred)
+        if isinstance(example, LabeledTextSpanClassifyExample):
+            true_set = set([get_unique_text_span(s) for s in example.text_spans])
+            pred_set = set([get_unique_text_span(s) for s in pred])
+
+            tp_set, fp_set, fn_set = get_tp_fp_fn_set(true_set, pred_set)
+            rs_item.update(tp_set=tp_set, fp_set=fp_set, fn_set=fn_set)
+        output.append(rs_item)
+    return output
+
+
+
 
 #
 # def mask_o_inputs(input_mask, classify_vals, mask_ele, mask_percent):
@@ -383,6 +391,6 @@ def token_label2classify_label_input(target_token_label_sequence, multi_label, l
 #     return input_mask
 #
 
-class AbstractTextSpanClassifyModelAIConfig(AIConfigBaseModel):
+class AbstractTextSpanClassifyModelAIConfig(AIConfigBaseModel, ABC):
     example_cls = TextSpanClassifyExample
     labeled_example_cls = LabeledTextSpanClassifyExample

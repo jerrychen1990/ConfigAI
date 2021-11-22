@@ -19,6 +19,8 @@ from ai_schema import TextSpans, TextSpan, LabeledTextSpanClassifyExample
 from bert4keras.layers import GlobalPointer
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
+from snippets import seq2dict, log_cost_time, load_lines, discard_kwarg
+
 
 from config_ai.data_utils import truncate_record
 from config_ai.losses import LossLayer, global_pointer_crossentropy
@@ -27,7 +29,6 @@ from config_ai.models.text_span_classify.common import AbstractTextSpanClassifyM
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_sequence_encoder_model
 from config_ai.optimizers import OptimizerFactory
-from config_ai.utils import seq2dict, log_cost_time, load_lines, discard_kwarg
 
 logger = logging.getLogger(__name__)
 

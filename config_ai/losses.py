@@ -14,6 +14,7 @@ import logging
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
+from functools import wraps
 from bert4keras.backend import multilabel_categorical_crossentropy
 from tensorflow.keras.losses import categorical_crossentropy, binary_crossentropy, sparse_categorical_crossentropy, \
     kullback_leibler_divergence
@@ -79,6 +80,18 @@ def add_mask(loss_func):
 
 def build_classify_loss_layer(multi_label, sparse=True, mcs=False, with_mask=False, name="loss_layer",
                               rdrop_alpha=None):
+    """
+    构建分类任务的loss层
+    Args:
+        multi_label: 是否多标签分类
+        sparse: 是否将用sparse的方式输出（输出id，而不是向量）
+        mcs:
+        with_mask: 是否对分类结果做mask
+        name: loss层的名称
+        rdrop_alpha: rdrop的参数
+    Returns:一个keras layer,输出loss
+
+    """
     if mcs:
         loss_func = global_pointer_crossentropy
     elif multi_label:

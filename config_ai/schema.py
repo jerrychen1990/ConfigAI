@@ -10,17 +10,39 @@
                    2021/3/30:
 -------------------------------------------------
 """
-from typing import Union, List
+from typing import Union, List, Tuple
 from pydantic import BaseModel, Field
 
 
-class Label(BaseModel):
+# 基础数据类型
+
+class HashableModel(BaseModel):
+    class Config:
+        frozen = True
+
+
+# 标签
+class Label(HashableModel):
     name: str = Field(description="标签名称")
     prob: float = Field(description="标签概率", le=1., ge=0, default=1.)
 
 
-LabelOrLabels = Union[List[Label], Label]
+Labels = List[Label]
+LabelOrLabels = Union[Labels, Label]
 
+
+# 文本片段
+class TextSpan(HashableModel):
+    text: str = Field(description="文本片段内容")
+    span: Tuple[int, int] = Field(description="文本片段的下标区间，前闭后开")
+    label: str = Field(default="片段标签")
+    prob: float = Field(description="文本片段分类的概率值", default=1., ge=0., le=1.)
+
+
+TextSpans = List[TextSpan]
+
+
+# 模型输入输出
 
 class TextClassifyExample(BaseModel):
     text: str = Field(description="待分类的文本")
@@ -31,6 +53,18 @@ class LabeledTextClassifyExample(TextClassifyExample):
 
 
 UnionTextClassifyExample = Union[LabeledTextClassifyExample, TextClassifyExample]
+
+
+# 文本片段分类数据
+class TextSpanClassifyExample(TextClassifyExample):
+    pass
+
+
+class LabeledTextSpanClassifyExample(TextSpanClassifyExample):
+    text_spans: TextSpans = Field(description="文本片段列表")
+
+
+UnionTextSpanClassifyExample = Union[LabeledTextSpanClassifyExample, TextSpanClassifyExample]
 
 #
 # # 关系分类数据

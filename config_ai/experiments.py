@@ -223,7 +223,7 @@ class BaseExperiment(metaclass=ABCMeta):
 
 
 class TextClassifyExperiment(BaseExperiment):
-    valid_models = [CLSTextClassifyModel]
+    valid_models = [CLSTokenClassifyModel]
 
     def evaluate(self, examples: List[LabeledTextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
         true_labels = [e.label for e in examples]
