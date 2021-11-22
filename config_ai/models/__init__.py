@@ -18,12 +18,12 @@ from config_ai.models.core import AIConfigBaseModel
 # from config_ai.models.mlm import TFMLMModel
 # from config_ai.models.relation_classify import TFRelationClassify
 from config_ai.models.text_classify import CLSTokenClassifyModel
-from config_ai.models.text_span_classify import SeqLabelingModel
+from config_ai.models.text_span_classify import SeqLabelingModel, GlobalPointerModel
 
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = [CLSTokenClassifyModel] + \
-             [SeqLabelingModel]
+             [SeqLabelingModel, GlobalPointerModel]
 # [TFRelationClassify] + \
 # [TFMLMModel]
 

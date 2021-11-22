@@ -15,17 +15,17 @@ from typing import Dict, List
 
 import numpy as np
 import tensorflow as tf
-from ai_schema import TextSpans, TextSpan, LabeledTextSpanClassifyExample
 from bert4keras.layers import GlobalPointer
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import Model
 from snippets import seq2dict, log_cost_time, load_lines, discard_kwarg
 
-
+from config_ai.schema import TextSpans, TextSpan, LabeledTextSpanClassifyExample
 from config_ai.data_utils import truncate_record
 from config_ai.losses import LossLayer, global_pointer_crossentropy
 from config_ai.metrics import MetricLayer, global_pointer_f1_score
-from config_ai.models.text_span_classify.common import AbstractTextSpanClassifyModelAIConfig, UnionTextSpanClassifyExample
+from config_ai.models.text_span_classify.common import AbstractTextSpanClassifyModelAIConfig, \
+    UnionTextSpanClassifyExample
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_sequence_encoder_model
 from config_ai.optimizers import OptimizerFactory
@@ -33,7 +33,7 @@ from config_ai.optimizers import OptimizerFactory
 logger = logging.getLogger(__name__)
 
 
-class TFGlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
+class GlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
 
     def _load_config(self, config):
         super()._load_config(config)
@@ -47,13 +47,10 @@ class TFGlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         """
         构建模型
         Args:
+            head_size: GlobalPointer层的embedding size
             pretrained_model_path: 预训练模型地址
             pretrained_model_tag: 预训练模型类型bert/...
-            dense_dim_list: 序列encode之后过的每个全连接层的维度（默认用relu做激活函数）。如果为空列表，表示不添加全连接层
-            hidden_dropout_prob: 序列encode之后过得dropout层drop概率。避免过拟合
             bilstm_dim_list: 序列encode过程中如果要接bilstm。输入每个bilstm层的dimension
-            use_crf: 是否使用crf层
-            crf_lr_multiplier: crf层的学习率倍数，参考https://kexue.fm/archives/7196
             pos_weight: 正例的权重
             **kwargs:
         Returns:
@@ -61,9 +58,9 @@ class TFGlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         """
         with self.get_scope():
             encoder_model = get_sequence_encoder_model(vocab_size=self.vocab_size,
-                                                   pretrained_model_path=pretrained_model_path,
-                                                   pretrained_model_tag=pretrained_model_tag,
-                                                   bilstm_dim_list=bilstm_dim_list, **kwargs)
+                                                       pretrained_model_path=pretrained_model_path,
+                                                       pretrained_model_tag=pretrained_model_tag,
+                                                       bilstm_dim_list=bilstm_dim_list, **kwargs)
             sequence_embedding = encoder_model.output
             output = GlobalPointer(self.label_num, head_size)(sequence_embedding)
             output = Lambda(lambda x: x ** pos_weight, name="pos_weight_layer")(output)
@@ -97,9 +94,9 @@ class TFGlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         self._update_model_dict("train", self.train_model)
 
     def _example2feature(self, example: UnionTextSpanClassifyExample) -> Dict:
-        feature = self.tokenizer.do_tokenize(text=example.text, extra_text=example.extra_text, store_map=True)
+        feature = self.tokenizer.do_tokenize(text=example.text, store_map=True)
         if isinstance(example, LabeledTextSpanClassifyExample):
-            feature.update(text_spans=[e.dict() for e in example.label])
+            feature.update(text_spans=[e.dict(exclude_none=True) for e in example.text_spans])
         return feature
 
     def _feature2records(self, idx, feature: Dict, mode: str) -> List[dict]:
