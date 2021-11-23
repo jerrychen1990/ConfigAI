@@ -20,6 +20,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
+from snippets import log_cost_time, discard_kwarg, load_lines
 
 from config_ai.data_utils import truncate_record
 from config_ai.losses import build_classify_loss_layer
@@ -28,13 +29,12 @@ from config_ai.models.mlm.common import AbstractMLMClassifyModel
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_mlm_model
 from config_ai.optimizers import OptimizerFactory
-from config_ai.schema import MaskedLanguageModelExample, MASK
-from config_ai.utils import log_cost_time, discard_kwarg, load_lines
+from config_ai.schema import MLMExample, MASK
 
 logger = logging.getLogger(__name__)
 
 
-class TFMLMModel(AbstractMLMClassifyModel, TFBasedModel):
+class TransformerMLMModel(AbstractMLMClassifyModel, TFBasedModel):
 
     def _load_config(self, config):
         super()._load_config(config)
@@ -79,12 +79,11 @@ class TFMLMModel(AbstractMLMClassifyModel, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: MaskedLanguageModelExample) -> Dict:
-        feature = self.tokenizer.do_tokenize(text=example.text, extra_text=example.extra_text, store_map=False)
+    def _example2feature(self, example: MLMExample) -> Dict:
+        feature = self.tokenizer.do_tokenize(text=example.text)
         tokens = feature["tokens"]
         masks = [e for e in enumerate(tokens) if e[1] == MASK]
         feature["masks"] = masks
-
         if example.masked_tokens:
             assert len(masks) == len(example.masked_tokens)
             feature["masked_tokens"] = [(m[0], t) for m, t in zip(masks, example.masked_tokens)]
@@ -97,7 +96,6 @@ class TFMLMModel(AbstractMLMClassifyModel, TFBasedModel):
             if not masked_tokens:
                 token_infos = [e for e in enumerate(feature["tokens"]) if e[1] not in self.tokenizer.special_tokens]
                 masked_tokens = random.sample(token_infos, int(len(token_infos) * self.mask_percent))
-            #
             token_output = [0] * len(feature["tokens"])
             tokens = copy.copy(feature["tokens"])
             token_ids = copy.copy(feature["token_ids"])

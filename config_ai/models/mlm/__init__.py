@@ -10,5 +10,5 @@
                    2021/8/19:
 -------------------------------------------------
 """
-from config_ai.models.mlm.common import AbstractMLMClassifyModel, get_mlm_output, eval_mlm
-from config_ai.models.mlm.tf_mlm import TFMLMModel
+from config_ai.models.mlm.common import AbstractMLMClassifyModel, get_mlm_output
+from config_ai.models.mlm.transformer_mlm import TransformerMLMModel

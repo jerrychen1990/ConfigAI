@@ -15,7 +15,7 @@ from abc import ABC
 from typing import List, Set, Dict
 
 from config_ai.schema import TextClassifyExample, LabeledTextClassifyExample, Label, LabelOrLabels, \
-    UnionTextClassifyExample
+    UnionTextClassifyExample, Labels
 from config_ai.evaluate import get_tp_fp_fn_set
 
 from config_ai.constants import EMPTY_LABEL
@@ -59,7 +59,11 @@ def get_text_classify_output(examples: List[UnionTextClassifyExample],
 
     for example, pred in zip(examples, preds):
         rs_item = example.dict()
-        rs_item.update(predict=pred.dict())
+        if isinstance(pred, list):
+            rs_item.update(predict=[l.dict(exclude_none=True) for l in pred])
+        else:
+            rs_item.update(predict=pred.dict(exclude_none=True))
+
         if isinstance(example, LabeledTextClassifyExample):
             true_set = label2set(example.label)
             pred_set = label2set(pred)

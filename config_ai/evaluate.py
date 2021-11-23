@@ -15,9 +15,6 @@ from typing import List, Dict, Set, Sequence, Any
 from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan
 
 
-# from ai_schema.model import LabelOrLabels, TextSpans
-
-
 # 计算f1
 def get_f1(precision, recall):
     f1 = 0. if precision + recall == 0 else 2 * precision * recall / (precision + recall)
@@ -113,6 +110,7 @@ def eval_text_classify(true_labels: List[LabelOrLabels],
     rs_dict = dict(detail=detail_dict, micro=micro_eval_rs, macro=macro_eval_rs)
     return rs_dict
 
+
 def get_unique_text_span(text_span: TextSpan):
     return text_span.text, text_span.label, text_span.span
 
@@ -138,3 +136,17 @@ def eval_text_span_classify(true_spans: TextSpans, pred_spans: TextSpans) -> dic
     macro_eval_rs = get_macro_avg(detail_dict.values())
     rs_dict = dict(detail=detail_dict, micro=micro_eval_rs, macro=macro_eval_rs)
     return rs_dict
+
+
+def eval_mlm(masked_tokens_list: List[List[str]], pred_masked_tokens_list: List[List[str]]) -> dict:
+    assert len(masked_tokens_list) == len(pred_masked_tokens_list)
+    flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(masked_tokens_list) for t in tokens]
+    pred_flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(pred_masked_tokens_list) for t in tokens]
+    token_num = len(pred_flat_masked_tokens_list)
+    acc_num = len(set(flat_masked_tokens_list)&set(pred_flat_masked_tokens_list))
+
+    accuracy = acc_num / token_num if token_num else 0.
+    return dict(item_num=len(masked_tokens_list), token_num=token_num, accurate_token_num=acc_num, accuracy=accuracy)
+
+
+eval_relation_classify = eval_text_classify

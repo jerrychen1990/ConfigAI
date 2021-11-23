@@ -17,8 +17,7 @@ import tensorflow as tf
 from abc import ABCMeta, abstractmethod
 from snippets import print_info, jdumps, get_current_time_str, jdump
 
-# from ai_schema.eval import eval_text_classify, eval_text_span_classify
-from config_ai.evaluate import eval_text_classify
+from config_ai.evaluate import eval_text_classify, eval_text_span_classify
 from config_ai.schema import *
 from config_ai.backend import set_tf_config, set_random_seed
 from config_ai.callbacks import Evaluator

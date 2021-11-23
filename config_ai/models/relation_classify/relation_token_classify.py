@@ -16,7 +16,6 @@ from enum import Enum, unique
 from typing import Dict, List
 
 import tensorflow as tf
-from ai_schema import LabelOrLabels, Label
 from tensorflow.keras.activations import sigmoid, softmax
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.metrics import (
@@ -25,6 +24,8 @@ from tensorflow.keras.metrics import (
 )
 from tensorflow.keras.models import Model
 from tensorflow.python.keras.layers import Lambda
+from snippets import seq2dict, load_lines, flat, log_cost_time, discard_kwarg
+
 
 from config_ai.backend import apply_threshold, n_hot2idx_tensor
 from config_ai.data_utils import truncate_record
@@ -36,9 +37,8 @@ from config_ai.models.text_classify.common import get_classify_output
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_sequence_encoder_model
 from config_ai.optimizers import OptimizerFactory
-from config_ai.schema import UnionRelationClassifyExample, LabeledRelationClassifyExample
+from config_ai.schema import UnionRelationClassifyExample, LabeledRelationClassifyExample, LabelOrLabels, Label
 from config_ai.tokenizers import replace_unused_tokens, build_tokenizer
-from config_ai.utils import seq2dict, load_lines, flat, log_cost_time, discard_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class EmbeddingStrategy(Enum):
     ENTITY_START_END = "ENTITY_START_END"
 
 
-class TFRelationClassify(AbstractRelationClassifyModel, TFBasedModel):
+class RelationTokenClassify(AbstractRelationClassifyModel, TFBasedModel):
     custom_objects = dict(TokenExtractLayer=TokenExtractLayer)
 
     def _load_config(self, config):
@@ -58,7 +58,7 @@ class TFRelationClassify(AbstractRelationClassifyModel, TFBasedModel):
         self.max_len = self.task_config['max_len']
         self.multi_label = self.task_config["multi_label"]
         self.text_span_labels = load_lines(self.task_config["text_span_label_path"])
-        self.labels = load_lines(self.task_config['label_file_path'])
+        self.labels = load_lines(self.task_config['label_path'])
         self.sparse_label = not self.multi_label
         self.label2id, self.id2label = seq2dict(self.labels)
         self.label_num = len(self.label2id)
@@ -117,7 +117,7 @@ class TFRelationClassify(AbstractRelationClassifyModel, TFBasedModel):
     def compile_model(self, optimizer_name, optimizer_args, rdrop_alpha=None):
         logger.info("compiling model...")
         with self.get_scope():
-            classify_output = Input(shape=(self.label_num,) if self.multi_label else (), name='classify_output', dtype="int32")
+            classify_output = Input(shape=(self.label_num,) if self.multi_label else (), name='classify_output', dtype=tf.float32)
             inputs = self.nn_model.inputs
             output = self.nn_model.output
             loss_input = [classify_output, output]
@@ -150,22 +150,14 @@ class TFRelationClassify(AbstractRelationClassifyModel, TFBasedModel):
                      (f"[/O]", example.text_span2.span[1])]
 
         text = example.text
-        extra_text = example.extra_text
 
         for token, idx in sorted(idx_infos, key=lambda x: x[1], reverse=True):
-            if idx > len(text):
-                idx -= len(text)
-                extra_text = extra_text[:idx] + token + extra_text[idx:]
-            else:
                 text = text[:idx] + token + text[idx:]
 
-        # logger.info(text)
-        # logger.info(extra_text)
-        feature = self.tokenizer.do_tokenize(text, extra_text)
+        feature = self.tokenizer.do_tokenize(text)
         tokens = feature["tokens"]
         span_idxs = [tokens.index(e) for e, span in idx_infos]
         feature["span_idxs"] = span_idxs
-
         if isinstance(example, LabeledRelationClassifyExample):
             if isinstance(example.label, list):
                 labels = [e.name for e in example.label]

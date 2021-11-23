@@ -1,0 +1,2 @@
+{"text": "北京是中国的首都", "text_span1": {"text":"北京", "span": [0,2], "label": "城市"}, "text_span2": {"text":"中国", "span": [3,5], "label": "国家"}, "label":[{"name":"首都"}]}
+{"text": "上海不是中国的首都", "text_span1": {"text":"上海", "span": [0,2], "label": "城市"}, "text_span2": {"text":"中国", "span": [4,6], "label": "国家"}, "label":[]}

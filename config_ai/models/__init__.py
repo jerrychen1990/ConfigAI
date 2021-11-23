@@ -15,17 +15,17 @@ import os
 
 from snippets.utils import jload
 from config_ai.models.core import AIConfigBaseModel
-# from config_ai.models.mlm import TFMLMModel
-# from config_ai.models.relation_classify import TFRelationClassify
+from config_ai.models.mlm import TransformerMLMModel
+from config_ai.models.relation_classify import RelationTokenClassify
 from config_ai.models.text_classify import CLSTokenClassifyModel
 from config_ai.models.text_span_classify import SeqLabelingModel, GlobalPointerModel
 
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = [CLSTokenClassifyModel] + \
-             [SeqLabelingModel, GlobalPointerModel]
-# [TFRelationClassify] + \
-# [TFMLMModel]
+             [SeqLabelingModel, GlobalPointerModel] + \
+             [RelationTokenClassify] + \
+             [TransformerMLMModel]
 
 _ALL_MODEL_DICT = {cls.__name__: cls for cls in ALL_MODELS}
 

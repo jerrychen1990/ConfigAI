@@ -10,7 +10,7 @@
                    2021/3/30:
 -------------------------------------------------
 """
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 from pydantic import BaseModel, Field
 
 
@@ -66,22 +66,25 @@ class LabeledTextSpanClassifyExample(TextSpanClassifyExample):
 
 UnionTextSpanClassifyExample = Union[LabeledTextSpanClassifyExample, TextSpanClassifyExample]
 
-#
-# # 关系分类数据
-# class RelationClassifyExample(TextClassifyExample):
-#     text_span1: TextSpan = Field(description="第一个text span")
-#     text_span2: TextSpan = Field(description="第二个text span")
-#
-#
-# # 关系分类带标签数据
-# class LabeledRelationClassifyExample(RelationClassifyExample):
-#     label: LabelOrLabels = Field(description="关系标签，可以是单标签也可以是多标签")
-#
-#
-# UnionRelationClassifyExample = Union[RelationClassifyExample, LabeledRelationClassifyExample]
-#
-# MaskedToken = Tuple[int, str]
-#
-# # 带有标注的MLM任务数据
-# class MaskedLanguageModelExample(TextClassifyExample):
-#     masked_tokens: Optional[List[str]] = Field(description="被masked掉的token值")
+
+# 关系分类数据
+class RelationClassifyExample(TextClassifyExample):
+    text_span1: TextSpan = Field(description="第一个text span")
+    text_span2: TextSpan = Field(description="第二个text span")
+
+
+# 关系分类带标签数据
+class LabeledRelationClassifyExample(RelationClassifyExample):
+    label: LabelOrLabels = Field(description="关系标签，可以是单标签也可以是多标签")
+
+
+UnionRelationClassifyExample = Union[LabeledRelationClassifyExample, RelationClassifyExample]
+
+
+# MLM任务数据
+class MLMExample(BaseModel):
+    text: str = Field(description="原始文本")
+    masked_tokens: Optional[List[str]] = Field(description="被masked掉的token值")
+
+
+MASK = '[MASK]'

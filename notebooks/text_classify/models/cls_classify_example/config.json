@@ -1,0 +1,17 @@
+{
+    "tokenizer_config": {
+        "tokenizer_name": "bert_word_piece",
+        "tokenizer_args": {
+            "vocabs": "/nfs/pony/chenhao/pretrain/chinese_rbt4_L-4_H-768_A-12/vocab.txt"
+        }
+    },
+    "task_config": {
+        "label_path": "/nfs/pony/chenhao/workspace/ConfigAI/examples/text_classify/data/labels.txt",
+        "max_len": 128,
+        "multi_label": false
+    },
+    "model_name": "cls_classify_example",
+    "model_cls": "CLSTextClassifyModel",
+    "model_dict": {
+        "test": {
+            "model": 

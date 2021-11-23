@@ -1,5 +1,3 @@
-examples/
-notebooks/
 scripts.sh
 dist/
 config_ai.egg-info/

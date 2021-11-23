@@ -15,10 +15,10 @@ from typing import Dict, List
 
 import numpy as np
 import tensorflow as tf
-from ai_schema import LabeledTextClassifyExample, Label, LabelOrLabels
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
+from snippets import log_cost_time, discard_kwarg, jload, inverse_dict, find_span, load_lines, flat
 
 from config_ai.data_utils import truncate_record
 from config_ai.losses import build_classify_loss_layer
@@ -28,7 +28,8 @@ from config_ai.models.text_classify.common import AbstractTextClassifyModel, \
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_mlm_model
 from config_ai.optimizers import OptimizerFactory
-from config_ai.utils import log_cost_time, discard_kwarg, jload, inverse_dict, find_span, load_lines, flat
+from config_ai.schema import LabeledTextClassifyExample, Label, LabelOrLabels
+
 
 logger = logging.getLogger(__name__)
 

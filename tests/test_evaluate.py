@@ -11,8 +11,8 @@
 import json
 import logging
 import unittest
-from ai_schema import *
-from ai_schema.eval import eval_text_classify, eval_text_span_classify
+from config_ai.schema import *
+from config_ai.evaluate import eval_text_classify, eval_text_span_classify
 
 logger = logging.getLogger(__name__)
 

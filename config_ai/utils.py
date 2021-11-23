@@ -12,54 +12,11 @@
 """
 import logging
 import collections
+import os
 from configparser import ConfigParser
 from snippets.utils import *
 logger = logging.getLogger(__name__)
-#
-#
-# # 创建一个目录
-# def create_dir_path(path: str):
-#     dir_path = os.path.dirname(path)
-#     if not os.path.exists(dir_path):
-#         os.makedirs(dir_path)
-#
 
-# def pretty_floats(obj, r=4):
-#     if isinstance(obj, float):
-#         return round(obj, r)
-#     elif isinstance(obj, dict):
-#         return dict((k, pretty_floats(v)) for k, v in obj.items())
-#     elif isinstance(obj, (list, tuple)):
-#         return map(pretty_floats, obj)
-#     return obj
-#
-# # 输入同时适配dict和list of dict两种情况
-# def adapt_single(data_field):
-#     def wrapper(func):
-#         @wraps(func)
-#         def rs_func(*args, **kwargs):
-#             data = kwargs.get(data_field)
-#             is_single = False
-#             if not isinstance(data, list):
-#                 kwargs[data_field] = [data]
-#                 is_single = True
-#             res = func(*args, **kwargs)
-#             if is_single:
-#                 res = res[0]
-#             return res
-#
-#         return rs_func
-#
-#     return wrapper
-#
-#
-# # 限制数据条目数
-# def get_limit_data(data, max_num: int):
-#     for idx, item in zip(range(max_num), data):
-#         yield item
-#
-#
-#
 # # 深度遍历用u更新d
 def deep_update(d: dict, u: dict):
     for k, v in u.items():
@@ -97,6 +54,9 @@ def read_config(config_path: str) -> dict:
         return rs
 
     cfg_dict = dict()
+    if not os.path.exists(config_path):
+        raise Exception(f"file {config_path} not exists!")
+
     logger.info(f"parsing config with path:{config_path}")
     if config_path.endswith(".ini"):
         parser = ConfigParser()
@@ -161,65 +121,3 @@ def truncate_seq(seq: Sequence, max_len: int, mode="tail", keep_head=True, keep_
             return [seq[0]] + seq[1:][-(max_len - 1):]
         return seq[-max_len:]
     raise ValueError(f"not valid mode:{mode}!")
-#
-
-# # 将一个序列随机切分成两部分
-# def random_split(seq: Sequence, rate: float) -> Tuple[Sequence, Sequence]:
-#     tmp = copy.copy(seq)
-#     random.shuffle(tmp)
-#     idx = int(rate * len(tmp))
-#     return tmp[:idx], tmp[idx:]
-#
-#
-# def replace_none(val, default_val):
-#     return default_val if val is None else val
-
-
-#
-# # 将seq随机重排之后切成n等分
-# def nfold(seq: Sequence, n) -> List[Tuple[Sequence, Sequence]]:
-#     random.shuffle(seq)
-#     num, remain = divmod(len(seq), n)
-#     folds = []
-#     start = 0
-#     for idx in range(n):
-#         end = start + num
-#         if idx < remain:
-#             end += 1
-#
-#         folds.append(seq[start:end])
-#         start = end
-#     return folds
-#
-#
-# def inverse_dict(d: dict, overwrite=False):
-#     rs = dict() if overwrite else collections.defaultdict(list)
-#
-#     def update_rs(_k, _v):
-#         if overwrite:
-#             rs[_k] = _v
-#         else:
-#             rs[_k].append(_v)
-#
-#     for k, v in d.items():
-#         if isinstance(v, list):
-#             for ele in v:
-#                 update_rs(ele, k)
-#         else:
-#             update_rs(v, k)
-#     return dict(rs)
-#
-#
-# def find_span(l, val):
-#     spans = []
-#     start = None
-#
-#     for idx, v in enumerate(l):
-#         if v == val and start is None:
-#             start = idx
-#         if v != val and start is not None:
-#             spans.append((start, idx))
-#             start = None
-#     if start:
-#         spans.append((start, len(l)))
-#     return spans
