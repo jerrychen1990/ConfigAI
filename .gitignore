@@ -2,6 +2,6 @@ scripts.sh
 dist/
 config_ai.egg-info/
 __pycache__
-*.ipynb
+/*.ipynb
 .idea/
 .ipynb_checkpoints
