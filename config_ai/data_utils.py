@@ -143,7 +143,7 @@ class FileDataManager(DataManager):
         super().__init__(model=model)
         self.data_file = data_file
         self.model = model
-        self.cache_file = f"{self.data_file}_cache_{self.model.tokenizer.get_cache_tag()}"
+        self.cache_file = f"{self.data_file}_cache_{self.model.model_name}.{self.model.tokenizer.get_cache_tag()}"
 
     def store_features(self, mode="file", overwrite_cache=False):
         examples = self.model.jload_lines(self.data_file, return_generator=True)

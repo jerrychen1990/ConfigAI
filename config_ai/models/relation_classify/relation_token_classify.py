@@ -50,7 +50,7 @@ class EmbeddingStrategy(Enum):
     ENTITY_START_END = "ENTITY_START_END"
 
 
-class RelationTokenClassify(AbstractRelationClassifyModel, TFBasedModel):
+class RelationTokenClassifyModel(AbstractRelationClassifyModel, TFBasedModel):
     custom_objects = dict(TokenExtractLayer=TokenExtractLayer)
 
     def _load_config(self, config):

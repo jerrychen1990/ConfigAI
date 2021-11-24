@@ -15,22 +15,22 @@ from typing import Optional, Dict
 
 import tensorflow as tf
 from abc import ABCMeta, abstractmethod
-from snippets import print_info, jdumps, get_current_time_str, jdump
-
-from config_ai.evaluate import eval_text_classify, eval_text_span_classify
+from config_ai.evaluate import eval_text_classify, eval_text_span_classify, eval_relation_classify, eval_mlm
+from config_ai.models.mlm import get_mlm_output
+from config_ai.models.relation_classify.common import get_relation_classify_output
+from config_ai.models.text_span_classify.common import get_text_span_classify_output
 from config_ai.schema import *
 from config_ai.backend import set_tf_config, set_random_seed
 from config_ai.callbacks import Evaluator
 from config_ai.models import *
 from config_ai.models.core import AIConfigBaseModel
 from config_ai.models.text_classify.common import get_text_classify_output
-from config_ai.utils import read_config
-# from config_ai.models.rel_extract.common import eval_rel_extract_result, get_rel_extract_output
-# from config_ai.models.seq2seq.common import eval_seq2seq_result, get_seq2seq_output
-# from config_ai.models.spo_extract.common import eval_spo_extract_result, get_spo_extract_output
-# from config_ai.models.mlm import eval_mlm, get_mlm_output
-# from config_ai.models.text_span_classify.common import get_text_span_classify_output
-# from config_ai.models.relation_classify.common import get_relation_classify_output, eval_relation_classify
+from config_ai.utils import print_info, jdumps, get_current_time_str, jdump, read_config
+
+from config_ai.models.text_span_classify.common import get_text_span_classify_output
+from config_ai.models.relation_classify.common import get_relation_classify_output
+from config_ai.models.relation_classify.common import get_relation_classify_output
+from config_ai.evaluate import *
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ class BaseExperiment(metaclass=ABCMeta):
 
 
 class TextClassifyExperiment(BaseExperiment):
-    valid_models = [CLSTokenClassifyModel]
+    valid_models = [CLSTokenClassifyModel, MLMTextClassifyModel]
 
     def evaluate(self, examples: List[LabeledTextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
         true_labels = [e.label for e in examples]
@@ -232,41 +232,44 @@ class TextClassifyExperiment(BaseExperiment):
     def get_output(self, examples: List[UnionTextClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
         return get_text_classify_output(examples, preds)
 
+
 #
-# class TextSpanClassifyExperiment(BaseExperiment):
-#     valid_models = [TFSeqLabelingModel, TFGlobalPointerModel]
+class TextSpanClassifyExperiment(BaseExperiment):
+    valid_models = [SeqLabelingModel, GlobalPointerModel]
+
+    def evaluate(self, examples: List[LabeledTextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
+        true_text_spans = [e.text_spans for e in examples]
+        rs = eval_text_span_classify(true_text_spans, preds)
+        return rs
+
+    def get_output(self, examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
+        return get_text_span_classify_output(examples, preds)
+
+
 #
-#     def evaluate(self, examples: List[LabeledTextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
-#         true_labels = [e.label for e in examples]
-#         rs = eval_text_span_classify(true_labels, preds)
-#         return rs
+class RelationClassifyExperiment(BaseExperiment):
+    valid_models = [RelationTokenClassifyModel]
+
+    def evaluate(self, examples: List[LabeledRelationClassifyExample], preds: List[LabelOrLabels]) -> Dict:
+        true_labels = [e.label for e in examples]
+        rs = eval_relation_classify(true_labels, preds)
+        return rs
+
+    def get_output(self, examples: List[UnionRelationClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
+        return get_relation_classify_output(examples, preds)
+
+
 #
-#     def get_output(self, examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
-#         return get_text_span_classify_output(examples, preds)
-#
-#
-# class RelationClassifyExperiment(BaseExperiment):
-#     valid_models = [TFRelationClassify]
-#
-#     def evaluate(self, examples: List[LabeledRelationClassifyExample], preds: List[LabelOrLabels]) -> Dict:
-#         true_labels = [e.label for e in examples]
-#         rs = eval_relation_classify(true_labels, preds)
-#         return rs
-#
-#     def get_output(self, examples: List[UnionRelationClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
-#         return get_relation_classify_output(examples, preds)
-#
-#
-# class MLMExperiment(BaseExperiment):
-#     valid_models = [TFMLMModel]
-#
-#     def evaluate(self, examples: List[MaskedLanguageModelExample], preds: List[List[str]]) -> Dict:
-#         masked_tokens_list = [e.masked_tokens for e in examples]
-#         rs = eval_mlm(masked_tokens_list, preds)
-#         return rs
-#
-#     def get_output(self, examples: List[MaskedLanguageModelExample], preds: List[List[str]]) -> List[dict]:
-#         return get_mlm_output(examples, preds)
+class MLMExperiment(BaseExperiment):
+    valid_models = [TransformerMLMModel]
+
+    def evaluate(self, examples: List[MLMExample], preds: List[List[str]]) -> Dict:
+        masked_tokens_list = [e.masked_tokens for e in examples]
+        rs = eval_mlm(masked_tokens_list, preds)
+        return rs
+
+    def get_output(self, examples: List[MLMExample], preds: List[List[str]]) -> List[dict]:
+        return get_mlm_output(examples, preds)
 
 
 #
@@ -296,10 +299,9 @@ class TextClassifyExperiment(BaseExperiment):
 
 
 class ExperimentFactory:
-    _EXPERIMENTS = [TextClassifyExperiment]
+    _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment]
 
-    _BUILDERS = {e.__name__: e for e in _EXPERIMENTS}
-    _MODEL2EXPERIMENT = {m: exp for exp in _BUILDERS.values() for m in exp.valid_models}
+    _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
 
     @classmethod
     def create(cls, config_path: str):
@@ -310,6 +312,6 @@ class ExperimentFactory:
         if not builder:
             raise ValueError(
                 f"not valid model_cls:{model_cls}, "
-                f"valid model_cls list:{sorted(cls._MODEL2EXPERIMENT.keys())}"
+                f"valid model_cls list:{list(cls._MODEL2EXPERIMENT.keys())}"
             )
         return builder(config)

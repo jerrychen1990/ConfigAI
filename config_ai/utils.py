@@ -10,12 +10,13 @@
                    2021/3/30:
 -------------------------------------------------
 """
-import logging
 import collections
-import os
 from configparser import ConfigParser
 from snippets.utils import *
+from snippets.decorators import *
+
 logger = logging.getLogger(__name__)
+
 
 # # 深度遍历用u更新d
 def deep_update(d: dict, u: dict):
@@ -25,6 +26,8 @@ def deep_update(d: dict, u: dict):
         else:
             d[k] = v
     return d
+
+
 #
 
 # 读一个.ini配置文件路径。对其中的值做eval之后，得到dict格式的配置内容
@@ -76,37 +79,6 @@ def read_config(config_path: str) -> dict:
     return base_cfg_dict
 
 
-# def find_all(content: str, to_find: str, overlap=False, ignore_case=False) -> List[Tuple]:
-#     """
-#     从$content中找到所有$to_find出现的span
-#     Args:
-#         content: 在哪个字符串中查找
-#         to_find: 需要查找的对象
-#         overlap: 查找的span是否可以重叠
-#         ignore_case: 是否忽略case
-#     Returns: 所有匹配的span的列表
-#
-#     """
-#     rs_list = []
-#     if ignore_case:
-#         content = content.lower()
-#         to_find = to_find.lower()
-#     if not to_find:
-#         return rs_list
-#     text_len = len(to_find)
-#
-#     beg = 0
-#     while True:
-#         b = content.find(to_find, beg)
-#         if b == -1:
-#             return rs_list
-#         e = b + text_len
-#         rs_list.append((b, e))
-#         beg = b + 1 if overlap else e
-#     return rs_list
-#
-
-#
 # 截断序列
 def truncate_seq(seq: Sequence, max_len: int, mode="tail", keep_head=True, keep_tail=True):
     if not seq:
@@ -121,3 +93,36 @@ def truncate_seq(seq: Sequence, max_len: int, mode="tail", keep_head=True, keep_
             return [seq[0]] + seq[1:][-(max_len - 1):]
         return seq[-max_len:]
     raise ValueError(f"not valid mode:{mode}!")
+
+
+def inverse_dict(d: dict, overwrite=False):
+    rs = dict() if overwrite else collections.defaultdict(list)
+
+    def update_rs(_k, _v):
+        if overwrite:
+            rs[_k] = _v
+        else:
+            rs[_k].append(_v)
+
+    for k, v in d.items():
+        if isinstance(v, list):
+            for ele in v:
+                update_rs(ele, k)
+        else:
+            update_rs(v, k)
+    return dict(rs)
+
+
+def find_span(l, val):
+    spans = []
+    start = None
+
+    for idx, v in enumerate(l):
+        if v == val and start is None:
+            start = idx
+        if v != val and start is not None:
+            spans.append((start, idx))
+            start = None
+    if start:
+        spans.append((start, len(l)))
+    return spans

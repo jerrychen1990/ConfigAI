@@ -2,7 +2,7 @@
 # -*- coding utf-8 -*-
 """
 -------------------------------------------------
-   File Name：     tf_mlm_text_classify.py
+   File Name：     mlm_text_classify.py
    Author :       chenhao
    time：          2021/9/22 15:12
    Description :
@@ -18,23 +18,21 @@ import tensorflow as tf
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
-from snippets import log_cost_time, discard_kwarg, jload, inverse_dict, find_span, load_lines, flat
 
 from config_ai.data_utils import truncate_record
 from config_ai.losses import build_classify_loss_layer
 from config_ai.metrics import MetricLayer, masked_sparse_categorical_accuracy
-from config_ai.models.text_classify.common import AbstractTextClassifyModel, \
-    UnionTextClassifyExample
+from config_ai.models.text_classify.common import AbstractTextClassifyModel, UnionTextClassifyExample
 from config_ai.models.tf_core import TFBasedModel
 from config_ai.nn_models import get_mlm_model
 from config_ai.optimizers import OptimizerFactory
 from config_ai.schema import LabeledTextClassifyExample, Label, LabelOrLabels
-
+from config_ai.utils import log_cost_time, discard_kwarg, jload, inverse_dict, find_span, load_lines, flat
 
 logger = logging.getLogger(__name__)
 
 
-class TFMLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
+class MLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
 
     def __init__(self, config):
         super().__init__(config=config)
@@ -47,18 +45,18 @@ class TFMLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
         self.word2label = jload(self.task_config['token2label_path'])
         self.label2word = inverse_dict(self.word2label, overwrite=False)
         self.pattern = self.task_config["pattern"]
-        self.keep_tokens = load_lines(self.task_config["keep_token_path"])
+        # self.keep_tokens = load_lines(self.task_config["keep_token_path"])
         self.tgt_tokens = flat([list(w) for w in self.word2label])
-        self.keep_tokens += self.tgt_tokens
+        # self.keep_tokens += self.tgt_tokens
         self.label_num = len(set(self.word2label.values()))
 
     def build_model(self, pretrained_model_path=None, pretrained_model_tag="bert",
                     pos_weight=1., bilstm_dim_list=[], transformer_kwargs={}, h5_file=None):
 
         with self.get_scope():
-            transformer_kwargs = {
-                "keep_tokens": self.keep_token_ids
-            }
+            # transformer_kwargs = {
+            #     "keep_tokens": self.keep_token_ids
+            # }
             self.nn_model = get_mlm_model(pretrained_model_path, pretrained_model_tag="bert",
                                           transformer_kwargs=transformer_kwargs, h5_file=h5_file)
             logger.info("nn model's summary:")
@@ -92,14 +90,14 @@ class TFMLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
         self._update_model_dict("train", self.train_model)
 
     def _example2feature(self, example: UnionTextClassifyExample) -> Dict:
-        if example.extra_text:
-            text = self.pattern
-            extra_text = self.tokenizer.end_token.join(example.text, example.extra_text)
-        else:
-            text = self.pattern
-            extra_text = example.text
-
-        feature = self.tokenizer.do_tokenize(text=text, extra_text=extra_text)
+        # if example.extra_text:
+        #     text = self.pattern
+        #     extra_text = self.tokenizer.end_token.join(example.text, example.extra_text)
+        # else:
+        #     text = self.pattern
+        #     extra_text = example.text
+        text = self.pattern + example.text
+        feature = self.tokenizer.do_tokenize(text=text)
 
         mask_spans = find_span(feature["tokens"], "[MASK]")
         assert len(mask_spans) == 1

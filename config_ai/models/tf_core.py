@@ -26,11 +26,12 @@ from tensorflow.python.keras.models import Model, InputLayer
 from tqdm import tqdm
 from abc import abstractmethod
 from typing import List, Dict, Iterable
-from snippets import log_cost_time, jdumps, execute_cmd
 
 from config_ai.constants import *
 from config_ai.data_utils import DataManager
 from config_ai.models.core import NNBasedModelAIConfig
+from config_ai.utils import log_cost_time, jdumps, execute_cmd
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,17 +48,17 @@ def get_tf_serving_model_path(path: str, tf_serving_version: int) -> str:
 
 
 @retry(stop_max_attempt_number=3, wait_random_min=5000, wait_random_max=10000)
-def save_keras_model(model: Model, path: str, format: str = None, tf_serving_version: int = None) -> None:
+def save_keras_model(model: Model, path: str, fmt: str = None, tf_serving_version: int = None) -> None:
     logging.getLogger("tensorflow").setLevel(logging.WARNING)
 
-    if format:
-        keras_model_path = get_keras_model_path(path=path, format=format)
+    if fmt:
+        keras_model_path = get_keras_model_path(path=path, format=fmt)
         logger.info(f"saving keras model to path:{keras_model_path}")
         dir_path = os.path.dirname(keras_model_path)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-        model.save(keras_model_path, include_optimizer=False, save_format=format)
+        model.save(keras_model_path, include_optimizer=False, save_format=fmt)
     if tf_serving_version:
         tf_serving_model_path = get_tf_serving_model_path(path=path, tf_serving_version=tf_serving_version)
         dir_path = os.path.dirname(tf_serving_model_path)
@@ -137,17 +138,17 @@ class TFBasedModel(NNBasedModelAIConfig):
         self.__dict__.update(state)
         self._init_tokenizer()
 
-    def save_nn_model(self, path, format="h5", tf_serving_version=None):
+    def save_nn_model(self, path, fmt="h5", tf_serving_version=None):
         """
         保存tensorflow模型
         Args:
             path: nn model保存的路径
-            format: 保存的keras文件格式
+            fmt: 保存的keras文件格式
             tf_serving_version: tf serving格式的文件的version。None的话表示不保存tf-serving格式文件
         Returns:
         """
         if self.nn_model:
-            save_keras_model(model=self.nn_model, path=path, format=format, tf_serving_version=tf_serving_version)
+            save_keras_model(model=self.nn_model, path=path, fmt=fmt, tf_serving_version=tf_serving_version)
 
     # 加载 nn model
     def load_nn_model(self, path):

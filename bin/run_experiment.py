@@ -35,7 +35,7 @@ def run_experiment(config_path):
         if os.path.exists(experiment_path):
             logger.info(f"removing failed experiment :{experiment_path}")
             shutil.rmtree(experiment_path)
-        logger.error(e)
+        logger.exception("")
 
 
 if __name__ == '__main__':
