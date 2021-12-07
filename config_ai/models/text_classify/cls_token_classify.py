@@ -107,8 +107,8 @@ class CLSTokenClassifyModel(AbstractTextClassifyModel, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: UnionTextClassifyExample) -> Dict:
-        feature = self.tokenizer.do_tokenize(text=example.text)
+    def example2feature(self, example: UnionTextClassifyExample) -> Dict:
+        feature = self.tokenizer.do_tokenize(text=example.text, extra_text=example.extra_text)
         if isinstance(example, LabeledTextClassifyExample):
             if isinstance(example.label, list):
                 labels = [e.name for e in example.label]

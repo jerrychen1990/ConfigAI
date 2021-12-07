@@ -143,7 +143,7 @@ class RelationTokenClassifyModel(AbstractRelationClassifyModel, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: UnionRelationClassifyExample) -> Dict:
+    def example2feature(self, example: UnionRelationClassifyExample) -> Dict:
         idx_infos = [(f"[S:{example.text_span1.label}]", example.text_span1.span[0]),
                      (f"[O:{example.text_span2.label}]", example.text_span2.span[0]),
                      (f"[/S]", example.text_span1.span[1]),

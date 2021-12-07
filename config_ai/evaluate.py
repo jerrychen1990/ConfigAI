@@ -12,7 +12,9 @@ from collections import OrderedDict, defaultdict
 
 from typing import List, Dict, Set, Sequence, Any
 
-from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+
+from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan, GenText
 
 
 # 计算f1
@@ -143,10 +145,19 @@ def eval_mlm(masked_tokens_list: List[List[str]], pred_masked_tokens_list: List[
     flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(masked_tokens_list) for t in tokens]
     pred_flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(pred_masked_tokens_list) for t in tokens]
     token_num = len(pred_flat_masked_tokens_list)
-    acc_num = len(set(flat_masked_tokens_list)&set(pred_flat_masked_tokens_list))
+    acc_num = len(set(flat_masked_tokens_list) & set(pred_flat_masked_tokens_list))
 
     accuracy = acc_num / token_num if token_num else 0.
     return dict(item_num=len(masked_tokens_list), token_num=token_num, accurate_token_num=acc_num, accuracy=accuracy)
+
+
+def eval_seq2seq(tgt_texts: List[GenText], gen_texts_list: List[List[GenText]]) -> dict:
+    bleu_list = [sentence_bleu(references=[tgt_text.text], hypothesis=gen_texts[0].text,
+                               smoothing_function=SmoothingFunction().method1) for tgt_text, gen_texts in
+                 zip(tgt_texts, gen_texts_list)]
+    eval_dict = dict(example_num=len(bleu_list), bleu=sum(bleu_list) / len(bleu_list))
+
+    return eval_dict
 
 
 eval_relation_classify = eval_text_classify

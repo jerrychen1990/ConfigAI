@@ -99,4 +99,32 @@ def get_mlm_model(pretrained_model_path="", pretrained_model_tag="bert", transfo
             **transformer_kwargs
         )
     output = pretrained_model(inputs)
-    return Model(inputs=inputs, outputs=output, name="lml_model")
+    return Model(inputs=inputs, outputs=output, name="mlm_model")
+
+
+def get_unilm_model(pretrained_model_path="", pretrained_model_tag="bert", transformer_kwargs={}, h5_file=None):
+    token_ids = Input(shape=(None,), dtype=tf.int32, name='token_ids')
+    segment_ids = Input(shape=(None,), dtype=tf.int32, name='segment_ids')
+    inputs = [token_ids, segment_ids]
+
+    if h5_file:
+        logger.info(f"loading pretrained keras model from h5 file:{h5_file}")
+        pretrained_model = load_model(filepath=h5_file, compile=False)
+    else:
+        config_path = os.path.join(pretrained_model_path, "config.json")
+        checkpoint_path = os.path.join(pretrained_model_path, "model.ckpt")
+        test_path = f"{checkpoint_path}.index"
+        if not os.path.exists(test_path):
+            logger.warning(f"ckpt_path:{test_path} not found, will not load pretrain weights!")
+            checkpoint_path = None
+        else:
+            logger.info(f"loading from pretrained weights: {checkpoint_path}")
+        pretrained_model = build_transformer_model(
+            config_path=config_path,
+            checkpoint_path=checkpoint_path,
+            model=pretrained_model_tag,
+            application="unilm",
+            **transformer_kwargs
+        )
+    output = pretrained_model(inputs)
+    return Model(inputs=inputs, outputs=output, name="unilm_model")

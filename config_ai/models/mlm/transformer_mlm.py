@@ -47,7 +47,8 @@ class TransformerMLMModel(AbstractMLMClassifyModel, TFBasedModel):
             if hasattr(self, 'keep_token_ids'):
                 transformer_kwargs.update(keep_tokens=self.keep_token_ids)
 
-            self.nn_model = get_mlm_model(pretrained_model_path, pretrained_model_tag="bert", transformer_kwargs=transformer_kwargs,
+            self.nn_model = get_mlm_model(pretrained_model_path, pretrained_model_tag="bert",
+                                          transformer_kwargs=transformer_kwargs,
                                           h5_file=h5_file)
         logger.info("nn model's summary:")
         self.nn_model.summary(print_fn=logger.info)
@@ -79,7 +80,7 @@ class TransformerMLMModel(AbstractMLMClassifyModel, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: MLMExample) -> Dict:
+    def example2feature(self, example: MLMExample) -> Dict:
         feature = self.tokenizer.do_tokenize(text=example.text)
         tokens = feature["tokens"]
         masks = [e for e in enumerate(tokens) if e[1] == MASK]

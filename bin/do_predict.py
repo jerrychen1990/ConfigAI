@@ -71,7 +71,7 @@ if __name__ == "__main__":
 do_predict.py \
 --model_cls=TFTextClassifyModel \
 --ckpt_path=/nfs/pony/chenhao/experiment/clue_tnews/roberta_wwm_base/model \
---data_path=/nfs/pony/chenhao/data/clue/tnews/test.jsonl \
+--data_path=/nfs/pony/chenhao/data/clue/tnews/mlm_test.jsonl \
 --output_path=/nfs/pony/chenhao/experiment/clue_tnews/roberta_wwm_base/output/test.json \
 --test_kwargs={"batch_size":32}
 """

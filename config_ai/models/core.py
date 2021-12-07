@@ -169,7 +169,7 @@ class NNBasedModelAIConfig(AIConfigBaseModel):
 
     # 原始输入的json数据到增强的json数据（可以做缓存）
     @abstractmethod
-    def _example2feature(self, example) -> Dict:
+    def example2feature(self, example) -> Dict:
         raise NotImplementedError
 
     # 增强的json数据到nn_model的输入数据

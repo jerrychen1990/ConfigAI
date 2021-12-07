@@ -10,10 +10,10 @@
                    2021/3/30:
 -------------------------------------------------
 """
-import collections
 from configparser import ConfigParser
-from snippets.utils import *
+
 from snippets.decorators import *
+from snippets.utils import *
 
 logger = logging.getLogger(__name__)
 

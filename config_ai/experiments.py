@@ -18,6 +18,7 @@ from abc import ABCMeta, abstractmethod
 from config_ai.evaluate import eval_text_classify, eval_text_span_classify, eval_relation_classify, eval_mlm
 from config_ai.models.mlm import get_mlm_output
 from config_ai.models.relation_classify.common import get_relation_classify_output
+from config_ai.models.seq2seq import get_seq2seq_output
 from config_ai.models.text_span_classify.common import get_text_span_classify_output
 from config_ai.schema import *
 from config_ai.backend import set_tf_config, set_random_seed
@@ -285,21 +286,21 @@ class MLMExperiment(BaseExperiment):
 #         return get_spo_extract_output(examples, preds)
 #
 #
-# class Seq2SeqExperiment(BaseExperiment):
-#     def evaluate(self, output_data: List[Seq2SeqExample]) -> Dict:
-#         true_target_lists: List[str] = [e["true_predict"] for e in output_data]
-#         pred_target_lists: List[List[str]] = [e['predict'] for e in output_data]
-#         rs = eval_seq2seq_result(true_target_lists, pred_target_lists, tokenizer=None,
-#                                  max_step=self.test_config.get("max_step"))
-#         return rs
-#
-#     def get_output(self, examples: List[Seq2SeqExample], preds: List[List[str]]) -> List[Seq2SeqExample]:
-#         return get_seq2seq_output(examples, preds)
-#
+class Seq2SeqExperiment(BaseExperiment):
+    valid_models = [TransformerSeq2SeqModel]
+
+    def evaluate(self, examples: List[LabeledSeq2SeqExample], preds: List[List[GenText]]) -> Dict:
+        tgt_texts: List[GenText] = [e.tgt_text for e in examples]
+        rs = eval_seq2seq(tgt_texts, preds)
+        return rs
+
+    def get_output(self, examples: List[UnionSeq2SeqExample], preds: List[List[GenText]]) -> List[dict]:
+        return get_seq2seq_output(examples, preds)
 
 
 class ExperimentFactory:
-    _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment]
+    _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
+                    Seq2SeqExperiment]
 
     _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
 

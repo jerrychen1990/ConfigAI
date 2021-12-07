@@ -34,6 +34,19 @@ def truncate_record(record: Dict, max_len: int, keys=["token_ids", "segment_ids"
     return record
 
 
+def records2batches(records, data_shape, batch_size):
+    for batch in get_batched_data(records, batch_size):
+        padded_batch = dict()
+        for key, shape in data_shape.items():
+            items = np.array([item[key] for item in batch])
+            if shape:
+                max_len = max(len(e) for e in items)
+                items = [np.pad(array=item, pad_width=(0, max_len - len(item))) for item in items]
+                items = np.stack(items)
+            padded_batch[key] = items
+        yield padded_batch
+
+
 class DataManager(object):
     def __init__(self, model):
         self.model = model
@@ -71,14 +84,6 @@ class DataManager(object):
             return gen()
         return list(gen())
 
-    # @classmethod
-    # def records2dataset(cls, records, dataset_shape, dataset_type):
-    #     def gen():
-    #         for record in records:
-    #             yield {k: v for k, v in record.items() if k in dataset_shape}
-    #
-    #     dataset = Dataset.from_generator(generator=gen, output_types=dataset_type)
-    #     return dataset
 
     def get_dataset(self, mode: str, max_num=None, **kwargs) -> Dataset:
         dataset_type, dataset_shape = self.model.get_dataset_info(mode, **kwargs)
@@ -95,15 +100,7 @@ class DataManager(object):
     def get_test_batches(self, batch_size, max_num=None):
         dataset_type, dataset_shape = self.model.get_dataset_info(mode="test")
         records = self.get_records(mode="test", max_num=max_num, return_generator=True)
-        for batch in get_batched_data(records, batch_size):
-            padded_batch = dict()
-            for key, shape in dataset_type.items():
-                items = [item[key] for item in batch]
-                max_len = max(len(e) for e in items)
-                items = [np.pad(array=item, pad_width=(0, max_len-len(item))) for item in items]
-                items = np.stack(items)
-                padded_batch[key] = items
-            yield padded_batch
+        return records2batches(records, dataset_shape, batch_size)
 
     def get_train_dataset(self, batch_size=32, buffer_size=None, repeat=None, **kwargs) -> Dataset:
         # logger.info(f"getting train dataset with batch_size:{batch_size}, shuffle_buffer_size:{buffer_size}")
@@ -115,6 +112,7 @@ class DataManager(object):
             padded_batch(batch_size, padded_shapes=dataset_shape).prefetch(buffer_size=1)
         return train_dataset
 
+
 class IterableDataManager(DataManager):
     def __init__(self, model, examples):
         super().__init__(model=model)
@@ -123,7 +121,7 @@ class IterableDataManager(DataManager):
     def store_features(self, **kwargs):
         if not self.features:
             logger.debug("storing features to memory")
-            self.features = [self.model._example2feature(e) for e in tqdm(self.examples)]
+            self.features = [self.model.example2feature(e) for e in tqdm(self.examples)]
 
     def get_features(self, return_generator=True, max_num=None):
 
@@ -134,7 +132,7 @@ class IterableDataManager(DataManager):
         else:
             logger.debug("generate features")
             examples = self.examples[:max_num] if max_num else self.examples
-            gen = (self.model._example2feature(example) for example in examples)
+            gen = (self.model.example2feature(example) for example in examples)
         return gen if return_generator else list(gen)
 
 
@@ -150,11 +148,11 @@ class FileDataManager(DataManager):
         if mode == "file":
             if overwrite_cache or not os.path.exists(self.cache_file):
                 logger.info(f"storing features to cache file:{self.cache_file}")
-                features = (self.model._example2feature(example) for example in tqdm(examples))
+                features = (self.model.example2feature(example) for example in tqdm(examples))
                 jdump_lines(features, self.cache_file, progbar=True)
         if mode == "memory" and not self.features:
             logger.info("storing features to memory")
-            self.features = [self.model._example2feature(e) for e in tqdm(examples)]
+            self.features = [self.model.example2feature(e) for e in tqdm(examples)]
 
     def get_features(self, return_generator=True, max_num=None) -> Iterable[Dict]:
         if self.features:
@@ -167,5 +165,5 @@ class FileDataManager(DataManager):
         else:
             logger.info("generate features")
             examples = self.model.jload_lines(self.data_file, max_data_num=max_num, return_generator=True)
-            gen = (self.model._example2feature(e) for e in examples)
+            gen = (self.model.example2feature(e) for e in examples)
         return gen if return_generator else list(gen)

@@ -119,7 +119,7 @@ class SeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: UnionTextSpanClassifyExample) -> Dict:
+    def example2feature(self, example: UnionTextSpanClassifyExample) -> Dict:
         feature = self.tokenizer.do_tokenize(text=example.text, store_map=True)
         if isinstance(example, LabeledTextSpanClassifyExample):
             feature.update(text_spans=[e.dict(exclude_none=True) for e in example.text_spans])

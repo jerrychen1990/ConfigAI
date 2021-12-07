@@ -42,10 +42,15 @@ class TextSpan(HashableModel):
 TextSpans = List[TextSpan]
 
 
+class TextExample(BaseModel):
+    text: str = Field(description="待分类的文本")
+    extra_text: Optional[str] = Field(description="额外的文本输入，用来区分两段文本使用")
+
+
 # 模型输入输出
 
-class TextClassifyExample(BaseModel):
-    text: str = Field(description="待分类的文本")
+class TextClassifyExample(TextExample):
+    pass
 
 
 class LabeledTextClassifyExample(TextClassifyExample):
@@ -56,7 +61,7 @@ UnionTextClassifyExample = Union[LabeledTextClassifyExample, TextClassifyExample
 
 
 # 文本片段分类数据
-class TextSpanClassifyExample(TextClassifyExample):
+class TextSpanClassifyExample(TextExample):
     pass
 
 
@@ -68,7 +73,7 @@ UnionTextSpanClassifyExample = Union[LabeledTextSpanClassifyExample, TextSpanCla
 
 
 # 关系分类数据
-class RelationClassifyExample(TextClassifyExample):
+class RelationClassifyExample(TextExample):
     text_span1: TextSpan = Field(description="第一个text span")
     text_span2: TextSpan = Field(description="第二个text span")
 
@@ -88,3 +93,19 @@ class MLMExample(BaseModel):
 
 
 MASK = '[MASK]'
+
+
+# Seq2Seq任务数据
+class Seq2SeqExample(TextExample):
+    pass
+
+class GenText(HashableModel):
+    text: str = Field(description="生成的文本")
+    prob: float = Field(description="生成文本的probability", ge=0., le=1., default=1.)
+
+
+class LabeledSeq2SeqExample(Seq2SeqExample):
+    tgt_text: GenText = Field(description="目标文本")
+
+
+UnionSeq2SeqExample = Union[LabeledSeq2SeqExample, Seq2SeqExample]

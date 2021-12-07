@@ -89,7 +89,7 @@ class MLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
         self.train_model.summary(print_fn=logger.info)
         self._update_model_dict("train", self.train_model)
 
-    def _example2feature(self, example: UnionTextClassifyExample) -> Dict:
+    def example2feature(self, example: UnionTextClassifyExample) -> Dict:
         # if example.extra_text:
         #     text = self.pattern
         #     extra_text = self.tokenizer.end_token.join(example.text, example.extra_text)

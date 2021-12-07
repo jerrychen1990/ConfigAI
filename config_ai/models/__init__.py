@@ -19,13 +19,15 @@ from config_ai.models.mlm import TransformerMLMModel
 from config_ai.models.relation_classify import RelationTokenClassifyModel
 from config_ai.models.text_classify import CLSTokenClassifyModel, MLMTextClassifyModel
 from config_ai.models.text_span_classify import SeqLabelingModel, GlobalPointerModel
+from config_ai.models.seq2seq import TransformerSeq2SeqModel
 
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = [CLSTokenClassifyModel, MLMTextClassifyModel] + \
              [SeqLabelingModel, GlobalPointerModel] + \
              [RelationTokenClassifyModel] + \
-             [TransformerMLMModel]
+             [TransformerMLMModel] + \
+             [TransformerSeq2SeqModel]
 
 _ALL_MODEL_DICT = {cls.__name__: cls for cls in ALL_MODELS}
 
