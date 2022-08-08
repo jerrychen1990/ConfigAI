@@ -12,12 +12,10 @@
 """
 import hashlib
 import logging
-import bert4keras
 
 from abc import ABC, abstractmethod
 from typing import List, Union
 
-from bert4keras.tokenizers import Tokenizer
 from tokenizers import BertWordPieceTokenizer
 from snippets.utils import load_lines
 
@@ -107,7 +105,6 @@ class AbstractTokenizer(ABC):
     def invisible_tokens(self):
         return [self.start_token, self.end_token]
 
-
     @property
     def start_token_id(self):
         return self.token2id(self.start_token)
@@ -193,15 +190,15 @@ class Bert4kerasTokenizer(AbstractTokenizer):
     def start_token(self):
         return self._tokenizer._token_start
 
-
-TOKENIZER_MAP = {
-    "bert_word_piece": HFWordPieceTokenizer,
-    "bert4keras": Bert4kerasTokenizer
-}
-
-
-def build_tokenizer(cls, args) -> AbstractTokenizer:
-    if isinstance(cls, str):
-        cls = TOKENIZER_MAP[cls]
-    tokenizer = cls(**args)
-    return tokenizer
+#
+# TOKENIZER_MAP = {
+#     "bert_word_piece": HFWordPieceTokenizer,
+#     "bert4keras": Bert4kerasTokenizer
+# }
+#
+#
+# def build_tokenizer(cls, args) -> AbstractTokenizer:
+#     if isinstance(cls, str):
+#         cls = TOKENIZER_MAP[cls]
+#     tokenizer = cls(**args)
+#     return tokenizer

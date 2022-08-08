@@ -17,23 +17,21 @@ from abc import abstractmethod, ABC
 from typing import Dict, Iterable, List
 
 from snippets import jdumps, jdump, jload, jload_lines, load_lines, ensure_dir_path
-from tensorflow.python.keras.models import Model
 
-from config_ai.tokenizers import build_tokenizer
-from snippets import PythonObjectEncoder
+# from config_ai.tokenizers import build_tokenizer
+from config_ai.schema import get_task_info
 
 logger = logging.getLogger(__name__)
 
-class ModelEncoder(PythonObjectEncoder):
-    def default(self, obj):
-        if isinstance(obj, Model):
-            return obj.name
-        return super().default()
 
 class AIConfigBaseModel(ABC, object):
-    example_cls = None
-    labeled_example_cls = None
+    task = None
 
+    def __new__(cls, *args, **kwargs):
+        task_info = get_task_info(cls.task)
+        cls.input_cls = task_info["input"]
+        cls.output_cls = task_info["output"]
+        return super().__new__(cls)
     """
     所有model的一个基类，可以用底层可以是一个nn model，可以是一个规则系统，也可以是多个其他model构成的pipeline
     一个model用来解决一类给定输入输出的问题
@@ -44,12 +42,20 @@ class AIConfigBaseModel(ABC, object):
         self._load_config(config)
 
     def _load_config(self, config):
+        logger.info("loading config")
         logger.info("init model with config:")
         self.config = config
-        self.config["model_cls"] = self.__class__.__name__
+        # self.config["model_cls"] = self.__class__.__name__
         # logger.info(jdumps(self.config))
         self.model_name = config.get('model_name', "tmp_model")
         self.task_config = config.get('task_config')
+
+    @classmethod
+    def load_examples(cls, data_path: str, return_generator=False) -> Iterable:
+        if return_generator:
+            return (cls.input_cls(**e) for e in jload_lines(data_path, return_generator=True))
+        else:
+            return [cls.input_cls(**e) for e in jload_lines(data_path, return_generator=True)]
 
     @classmethod
     def jload_lines(cls, data_path, max_data_num=None, return_generator=False) -> Iterable:
@@ -78,7 +84,7 @@ class AIConfigBaseModel(ABC, object):
     def save(self, path, save_type="json"):
         logger.info(f"saving model to {path}")
         if save_type == "json":
-            jdump(self.config, AIConfigBaseModel.get_config_path(path), encoder=ModelEncoder)
+            jdump(self.config, AIConfigBaseModel.get_config_path(path))
         elif save_type == "pkl":
             pickle.dump(self, open(AIConfigBaseModel.get_pkl_path(path), "wb"))
         else:
@@ -103,7 +109,7 @@ class AIConfigBaseModel(ABC, object):
         raise NotImplementedError
 
     @abstractmethod
-    def predict(self, data, **kwargs):
+    def infer(self, data, **kwargs):
         raise NotImplementedError
 
 
@@ -122,20 +128,20 @@ class NNBasedModelAIConfig(AIConfigBaseModel):
 
     def _init_tokenizer(self):
         logger.info(f"initializing tokenizer with config:\n{jdumps(self.tokenizer_config)}")
-        self.tokenizer = build_tokenizer(self.tokenizer_config["tokenizer_name"],
-                                         self.tokenizer_config["tokenizer_args"])
-
-        if self.task_config.get("keep_token_path"):
-            self.keep_tokens = load_lines(self.task_config["keep_token_path"])
-            self.keep_token_ids = [self.tokenizer.token2id(t) for t in self.keep_tokens]
-            self.tokenizer_config["tokenizer_args"]["vocabs"] = self.keep_tokens
-            logger.info("reinitializing tokenizer with keep_tokens")
-            self.tokenizer = build_tokenizer(self.tokenizer_config["tokenizer_name"],
-                                             self.tokenizer_config["tokenizer_args"])
-
-        self.vocab_size = self.tokenizer.vocab_size
-
-        logger.info(f"tokenizer initialized with {self.vocab_size} vocabs")
+        # self.tokenizer = build_tokenizer(self.tokenizer_config["tokenizer_name"],
+        #                                  self.tokenizer_config["tokenizer_args"])
+        #
+        # if self.task_config.get("keep_token_path"):
+        #     self.keep_tokens = load_lines(self.task_config["keep_token_path"])
+        #     self.keep_token_ids = [self.tokenizer.token2id(t) for t in self.keep_tokens]
+        #     self.tokenizer_config["tokenizer_args"]["vocabs"] = self.keep_tokens
+        #     logger.info("reinitializing tokenizer with keep_tokens")
+        #     self.tokenizer = build_tokenizer(self.tokenizer_config["tokenizer_name"],
+        #                                      self.tokenizer_config["tokenizer_args"])
+        #
+        # self.vocab_size = self.tokenizer.vocab_size
+        #
+        # logger.info(f"tokenizer initialized with {self.vocab_size} vocabs")
 
     @ensure_dir_path
     def save(self, path, save_type="json", **kwargs):

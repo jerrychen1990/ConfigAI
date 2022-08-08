@@ -26,7 +26,7 @@ def get_mlm_output(examples: List[MLMExample],
 
     for example, pred in zip(examples, preds):
         rs_item = example.dict()
-        rs_item.update(predict=pred)
+        rs_item.update(infer=pred)
         if example.masked_tokens:
             assert len(pred) <= len(example.masked_tokens)
             acc_num = len([e for e in zip(pred, example.masked_tokens) if e[0] == e[1]])

@@ -10,8 +10,11 @@
                    2021/3/30:
 -------------------------------------------------
 """
+import re
+
 from configparser import ConfigParser
 
+import yaml
 from snippets.decorators import *
 from snippets.utils import *
 
@@ -28,9 +31,18 @@ def deep_update(d: dict, u: dict):
     return d
 
 
+def eval_env(text):
+    pattern = "\$\{.*?\}"
+    for item in re.findall(pattern, text):
+        text = text.replace(item, os.environ[item[2:-1]])
+    return text
+
+
 #
 
-# 读一个.ini配置文件路径。对其中的值做eval之后，得到dict格式的配置内容
+# 读取配置文件，支持.json/.ini/.yaml格式
+# 可以继承另一个配置文件
+# 可以引入环境变量
 def read_config(config_path: str) -> dict:
     def eval_param(param):
         if isinstance(param, str):
@@ -39,15 +51,15 @@ def read_config(config_path: str) -> dict:
                     return True
                 if param.upper() == "FALSE":
                     return False
-                rs = eval(param)
-                return rs
-            except Exception as e:
+                param = eval_env(param)
+                param = eval(param)
+                return param
+            except:
                 return param
         if isinstance(param, dict):
             return {k: eval_param(v) for k, v in param.items()}
         if isinstance(param, list):
             return [eval_param(v) for v in param]
-
         return param
 
     # convert cfg data to dict
@@ -65,9 +77,13 @@ def read_config(config_path: str) -> dict:
         parser = ConfigParser()
         parser.read(config_path)
         cfg_dict = cfg2dict(parser)
-    if config_path.endswith(".json"):
+    elif config_path.endswith(".json"):
         cfg_dict = jload(config_path)
-
+    elif config_path.endswith(".yaml"):
+        with open(config_path, mode='r', encoding="utf") as stream:
+            cfg_dict = yaml.safe_load(stream)
+    else:
+        raise ValueError(f"invalid config path:{config_path}")
     cfg_dict = eval_param(cfg_dict)
 
     if cfg_dict.get("common_config", {}).get("base_config"):

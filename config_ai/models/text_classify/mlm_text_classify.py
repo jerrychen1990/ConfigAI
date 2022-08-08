@@ -136,7 +136,7 @@ class MLMTextClassifyModel(AbstractTextClassifyModel, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_predict(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[LabelOrLabels]:
+    def _post_infer(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[LabelOrLabels]:
         def _tensor2output(feature, pred_tensor) -> LabelOrLabels:
             mask_idx_start, mask_idx_end = feature["mask_span"]
             # logger.info(pred_tensor.shape)

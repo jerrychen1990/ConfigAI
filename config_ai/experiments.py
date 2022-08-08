@@ -11,27 +11,14 @@
 -------------------------------------------------
 """
 import random
-from typing import Optional, Dict
-
-import tensorflow as tf
 from abc import ABCMeta, abstractmethod
-from config_ai.evaluate import eval_text_classify, eval_text_span_classify, eval_relation_classify, eval_mlm
-from config_ai.models.mlm import get_mlm_output
-from config_ai.models.relation_classify.common import get_relation_classify_output
-from config_ai.models.seq2seq import get_seq2seq_output
-from config_ai.models.text_span_classify.common import get_text_span_classify_output
-from config_ai.schema import *
-from config_ai.backend import set_tf_config, set_random_seed
-from config_ai.callbacks import Evaluator
+
+# from config_ai.callbacks import Evaluator
+from config_ai.evaluate import *
 from config_ai.models import *
 from config_ai.models.core import AIConfigBaseModel
-from config_ai.models.text_classify.common import get_text_classify_output
-from config_ai.utils import print_info, jdumps, get_current_time_str, jdump, read_config
-
-from config_ai.models.text_span_classify.common import get_text_span_classify_output
-from config_ai.models.relation_classify.common import get_relation_classify_output
-from config_ai.models.relation_classify.common import get_relation_classify_output
-from config_ai.evaluate import *
+from config_ai.schema import *
+from config_ai.utils import print_info, jdumps, get_current_time_str, jdump
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +40,7 @@ class BaseExperiment(metaclass=ABCMeta):
     valid_models = []
 
     def __init__(self, config: dict):
-        set_tf_config()
+        # set_tf_config()
         star_print("experiment param:")
         logger.info(jdumps(config))
         self.model: Optional[AIConfigBaseModel] = None
@@ -63,7 +50,7 @@ class BaseExperiment(metaclass=ABCMeta):
         self.model_cls = get_model_class_by_name(self.common_config["model_cls"])
         assert self.model_cls in self.valid_models
         random_seed = self.common_config.get("default_random_seed", random.randint(0, 1e9))
-        set_random_seed(random_seed)
+        # set_random_seed(random_seed)
         self.common_config["random_seed"] = random_seed
         self.experiment_dir = self.common_config['experiment_dir']
         self.project_name = self.common_config['project_name']
@@ -129,24 +116,24 @@ class BaseExperiment(metaclass=ABCMeta):
         callbacks = []
         # tf支持的所有callback
         is_tensorboard_callback = self.callback_config.get("tensorboard_callback", False)
-        # 写入tensorboard的callback方法
-        if is_tensorboard_callback:
-            tensorboard_log_dir = os.path.join(self.tensorboard_dir,
-                                               f"{self.model_name}-{get_current_time_str()}")
-            tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir, update_freq=200)
-            logger.info(f"add tensorboard callback with log path:{tensorboard_log_dir}")
-            callbacks.append(tensorboard)
-        # 当dev loss不再下降时，提前终止训练的方法
-        early_stop_kwargs = self.callback_config.get("early_stop_kwargs")
-        if early_stop_kwargs is not None:
-            logger.info(f"add early stop callback with kwargs:{early_stop_kwargs}")
-            early_stop = tf.keras.callbacks.EarlyStopping(**early_stop_kwargs)
-            callbacks.append(early_stop)
+        # # 写入tensorboard的callback方法
+        # if is_tensorboard_callback:
+        #     tensorboard_log_dir = os.path.join(self.tensorboard_dir,
+        #                                        f"{self.model_name}-{get_current_time_str()}")
+        #     tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir, update_freq=200)
+        #     logger.info(f"add tensorboard callback with log path:{tensorboard_log_dir}")
+        #     callbacks.append(tensorboard)
+        # # 当dev loss不再下降时，提前终止训练的方法
+        # early_stop_kwargs = self.callback_config.get("early_stop_kwargs")
+        # if early_stop_kwargs is not None:
+        #     logger.info(f"add early stop callback with kwargs:{early_stop_kwargs}")
+        #     early_stop = tf.keras.callbacks.EarlyStopping(**early_stop_kwargs)
+        #     callbacks.append(early_stop)
         # epoch结束时测评模型结果的callback
-        evaluator_kwargs = self.callback_config.get("evaluator_kwargs")
-        if evaluator_kwargs is not None:
-            evaluator = Evaluator(experiment=self, **evaluator_kwargs)
-            callbacks.append(evaluator)
+        # evaluator_kwargs = self.callback_config.get("evaluator_kwargs")
+        # if evaluator_kwargs is not None:
+        #     evaluator = Evaluator(experiment=self, **evaluator_kwargs)
+        #     callbacks.append(evaluator)
         logger.info(f"will train with callbacks:{callbacks}")
         return callbacks
 
@@ -175,8 +162,8 @@ class BaseExperiment(metaclass=ABCMeta):
                                   [self.train_data_path, self.dev_data_path, self.test_data_path]):
             if tag not in self.eval_phase_list and tag not in self.output_phase_list:
                 continue
-            logger.info("predict result on {} data:".format(tag))
-            preds = self.model.predict(data=data_path, **self.test_config)
+            logger.info("infer result on {} data:".format(tag))
+            preds = self.model.infer(data=data_path, **self.test_config)
             examples = self.model.jload_lines(data_path, return_generator=True)
             output_data = self.get_output(examples, preds)
             path = os.path.join(self.output_dir, f"{tag}.json")
@@ -220,99 +207,99 @@ class BaseExperiment(metaclass=ABCMeta):
     @abstractmethod
     def get_output(self, examples: List, preds: List) -> Dict:
         raise NotImplementedError
-
-
-class TextClassifyExperiment(BaseExperiment):
-    valid_models = [CLSTokenClassifyModel, MLMTextClassifyModel]
-
-    def evaluate(self, examples: List[LabeledTextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
-        true_labels = [e.label for e in examples]
-        rs = eval_text_classify(true_labels, preds)
-        return rs
-
-    def get_output(self, examples: List[UnionTextClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
-        return get_text_classify_output(examples, preds)
-
-
-#
-class TextSpanClassifyExperiment(BaseExperiment):
-    valid_models = [SeqLabelingModel, GlobalPointerModel]
-
-    def evaluate(self, examples: List[LabeledTextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
-        true_text_spans = [e.text_spans for e in examples]
-        rs = eval_text_span_classify(true_text_spans, preds)
-        return rs
-
-    def get_output(self, examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
-        return get_text_span_classify_output(examples, preds)
-
-
-#
-class RelationClassifyExperiment(BaseExperiment):
-    valid_models = [RelationTokenClassifyModel]
-
-    def evaluate(self, examples: List[LabeledRelationClassifyExample], preds: List[LabelOrLabels]) -> Dict:
-        true_labels = [e.label for e in examples]
-        rs = eval_relation_classify(true_labels, preds)
-        return rs
-
-    def get_output(self, examples: List[UnionRelationClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
-        return get_relation_classify_output(examples, preds)
-
-
-#
-class MLMExperiment(BaseExperiment):
-    valid_models = [TransformerMLMModel]
-
-    def evaluate(self, examples: List[MLMExample], preds: List[List[str]]) -> Dict:
-        masked_tokens_list = [e.masked_tokens for e in examples]
-        rs = eval_mlm(masked_tokens_list, preds)
-        return rs
-
-    def get_output(self, examples: List[MLMExample], preds: List[List[str]]) -> List[dict]:
-        return get_mlm_output(examples, preds)
-
-
 #
 #
-# class SPOExtractExperiment(BaseExperiment):
-#     def evaluate(self, output_data: List[SPOExtractExample]) -> Dict:
-#         true_target_lists: List[List[SPO]] = [e.true_predict for e in output_data]
-#         pred_target_lists: List[List[SPO]] = [e.extra_info['predict'] for e in output_data]
-#         rs = eval_spo_extract_result(true_target_lists, pred_target_lists)
+# class TextClassifyExperiment(BaseExperiment):
+#     valid_models = [CLSTokenClassifyModel, MLMTextClassifyModel]
+#
+#     def evaluate(self, examples: List[LabeledTextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
+#         true_labels = [e.label for e in examples]
+#         rs = eval_text_classify(true_labels, preds)
 #         return rs
 #
-#     def get_output(self, examples: List[SPOExtractExample], preds: List[List[SPO]]) -> List[SPOExtractExample]:
-#         return get_spo_extract_output(examples, preds)
+#     def get_output(self, examples: List[UnionTextClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
+#         return get_text_classify_output(examples, preds)
 #
 #
-class Seq2SeqExperiment(BaseExperiment):
-    valid_models = [TransformerSeq2SeqModel]
-
-    def evaluate(self, examples: List[LabeledSeq2SeqExample], preds: List[List[GenText]]) -> Dict:
-        tgt_texts: List[GenText] = [e.tgt_text for e in examples]
-        rs = eval_seq2seq(tgt_texts, preds)
-        return rs
-
-    def get_output(self, examples: List[UnionSeq2SeqExample], preds: List[List[GenText]]) -> List[dict]:
-        return get_seq2seq_output(examples, preds)
-
-
-class ExperimentFactory:
-    _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
-                    Seq2SeqExperiment]
-
-    _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
-
-    @classmethod
-    def create(cls, config_path: str):
-        config = read_config(config_path)
-        model_cls = config["common_config"].get("model_cls")
-        model_cls = get_model_class_by_name(model_cls)
-        builder = cls._MODEL2EXPERIMENT.get(model_cls)
-        if not builder:
-            raise ValueError(
-                f"not valid model_cls:{model_cls}, "
-                f"valid model_cls list:{list(cls._MODEL2EXPERIMENT.keys())}"
-            )
-        return builder(config)
+# #
+# class TextSpanClassifyExperiment(BaseExperiment):
+#     valid_models = [SeqLabelingModel, GlobalPointerModel]
+#
+#     def evaluate(self, examples: List[LabeledTextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
+#         true_text_spans = [e.text_spans for e in examples]
+#         rs = eval_text_span_classify(true_text_spans, preds)
+#         return rs
+#
+#     def get_output(self, examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
+#         return get_text_span_classify_output(examples, preds)
+#
+#
+# #
+# class RelationClassifyExperiment(BaseExperiment):
+#     valid_models = [RelationTokenClassifyModel]
+#
+#     def evaluate(self, examples: List[LabeledRelationClassifyExample], preds: List[LabelOrLabels]) -> Dict:
+#         true_labels = [e.label for e in examples]
+#         rs = eval_relation_classify(true_labels, preds)
+#         return rs
+#
+#     def get_output(self, examples: List[UnionRelationClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
+#         return get_relation_classify_output(examples, preds)
+#
+#
+# #
+# class MLMExperiment(BaseExperiment):
+#     valid_models = [TransformerMLMModel]
+#
+#     def evaluate(self, examples: List[MLMExample], preds: List[List[str]]) -> Dict:
+#         masked_tokens_list = [e.masked_tokens for e in examples]
+#         rs = eval_mlm(masked_tokens_list, preds)
+#         return rs
+#
+#     def get_output(self, examples: List[MLMExample], preds: List[List[str]]) -> List[dict]:
+#         return get_mlm_output(examples, preds)
+#
+#
+# #
+# #
+# # class SPOExtractExperiment(BaseExperiment):
+# #     def evaluate(self, output_data: List[SPOExtractExample]) -> Dict:
+# #         true_target_lists: List[List[SPO]] = [e.true_infer for e in output_data]
+# #         pred_target_lists: List[List[SPO]] = [e.extra_info['infer'] for e in output_data]
+# #         rs = eval_spo_extract_result(true_target_lists, pred_target_lists)
+# #         return rs
+# #
+# #     def get_output(self, examples: List[SPOExtractExample], preds: List[List[SPO]]) -> List[SPOExtractExample]:
+# #         return get_spo_extract_output(examples, preds)
+# #
+# #
+# class Seq2SeqExperiment(BaseExperiment):
+#     valid_models = [TransformerSeq2SeqModel]
+#
+#     def evaluate(self, examples: List[LabeledSeq2SeqExample], preds: List[List[GenText]]) -> Dict:
+#         tgt_texts: List[GenText] = [e.tgt_text for e in examples]
+#         rs = eval_seq2seq(tgt_texts, preds)
+#         return rs
+#
+#     def get_output(self, examples: List[UnionSeq2SeqExample], preds: List[List[GenText]]) -> List[dict]:
+#         return get_seq2seq_output(examples, preds)
+#
+#
+# class ExperimentFactory:
+#     _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
+#                     Seq2SeqExperiment]
+#
+#     _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
+#
+#     @classmethod
+#     def create(cls, config_path: str):
+#         config = read_config(config_path)
+#         model_cls = config["common_config"].get("model_cls")
+#         model_cls = get_model_class_by_name(model_cls)
+#         builder = cls._MODEL2EXPERIMENT.get(model_cls)
+#         if not builder:
+#             raise ValueError(
+#                 f"not valid model_cls:{model_cls}, "
+#                 f"valid model_cls list:{list(cls._MODEL2EXPERIMENT.keys())}"
+#             )
+#         return builder(config)

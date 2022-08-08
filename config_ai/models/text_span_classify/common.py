@@ -358,7 +358,7 @@ def get_text_span_classify_output(examples: List[UnionTextSpanClassifyExample], 
     output = []
     for example, pred in zip(examples, preds):
         rs_item = example.dict(exclude_none=True)
-        rs_item.update(predict=pred)
+        rs_item.update(infer=pred)
         if isinstance(example, LabeledTextSpanClassifyExample):
             true_set = set([get_unique_text_span(s) for s in example.text_spans])
             pred_set = set([get_unique_text_span(s) for s in pred])
