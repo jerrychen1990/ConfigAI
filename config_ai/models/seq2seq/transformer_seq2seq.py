@@ -128,11 +128,11 @@ class TransformerSeq2SeqModel(AbstractSeq2SeqModel, TFBasedModel):
                         keys=["token_ids", "segment_ids", "tokens"])
         return [record]
 
-    def _gen_infer(self, records, topk, batch_size, only_copy=False):
+    def _gen_predict(self, records, topk, batch_size, only_copy=False):
         dataset_type, dataset_shape = self.get_dataset_info(mode="gen")
         test_batches = records2batches(records, dataset_shape, batch_size)
 
-        logger.info("infering with tf model...")
+        logger.info("predicting with tf model...")
         pred_tensor_data = []
         for batch in test_batches:
             pred_batch = self.gen_model(batch, training=False)
@@ -150,7 +150,7 @@ class TransformerSeq2SeqModel(AbstractSeq2SeqModel, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_infer(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[List[GenText]]:
+    def _post_predict(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[List[GenText]]:
 
         def _tensor2output(feature, pred_tensor) -> List[str]:
             token_len = len(feature["tokens"])
@@ -168,23 +168,23 @@ class TransformerSeq2SeqModel(AbstractSeq2SeqModel, TFBasedModel):
         preds = [_tensor2output(feature, tensor) for feature, tensor in zip(features, pred_tensors)]
         return preds
 
-    def _infer(self, data_manager: DataManager, batch_size, mode="test", gen_kwargs={},
+    def _predict(self, data_manager: DataManager, batch_size, mode="test", gen_kwargs={},
                  max_pred_num=None, tf_serving_url=None, show_detail=False, **kwargs) -> List[List[GenText]]:
 
         if mode == "test":
-            return super()._infer(data_manager=data_manager, batch_size=batch_size,
+            return super()._predict(data_manager=data_manager, batch_size=batch_size,
                                     show_detail=show_detail, max_pred_num=max_pred_num,
                                     tf_serving_url=tf_serving_url, **kwargs)
 
             dataset = self._pre_process(data_manager=data_manager, batch_size=batch_size, mode=mode,
                                         max_num=max_pred_num)
-            pred_tensors = self._model_infer(dataset=dataset, model=self.nn_model, tf_serving_url=tf_serving_url,
+            pred_tensors = self._model_predict(dataset=dataset, model=self.nn_model, tf_serving_url=tf_serving_url,
                                                show_detail=show_detail)
             features = data_manager.get_features(max_num=max_pred_num)
-            preds = self._post_infer(features=features, pred_tensors=pred_tensors, show_detail=show_detail)
+            preds = self._post_predict(features=features, pred_tensors=pred_tensors, show_detail=show_detail)
             return preds
         if mode == "gen":
-            beam_searcher = BeamSearcher(pred_func=self._gen_infer)
+            beam_searcher = BeamSearcher(pred_func=self._gen_predict)
             records = data_manager.get_records(mode=mode, return_generator=False, max_num=max_pred_num)
             preds = beam_searcher.run(records=records, batch_size=batch_size, show_detail=show_detail, **gen_kwargs)
             assert len(preds) == len(records)

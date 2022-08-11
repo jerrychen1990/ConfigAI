@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 -------------------------------------------------
-   File Name：     do_infer
+   File Name：     do_predict
    Description :
    Author :       chenhao
    date：          2021/4/25
@@ -22,7 +22,7 @@ from config_ai.utils import get_batched_data, jdump_lines
 logger = logging.getLogger(__name__)
 
 
-def do_infer(model_cls, ckpt_path, data_path, output_path,
+def do_predict(model_cls, ckpt_path, data_path, output_path,
                batch_size: int = 1024, test_kwargs="{}", continue_idx=0):
     logger.info("test_kwargs")
     logger.info(test_kwargs)
@@ -50,13 +50,13 @@ def do_infer(model_cls, ckpt_path, data_path, output_path,
         logger.info(type(continue_idx))
 
         logger.info(
-            f"infering data batch:{idx}, batch_size:{len(batch)},origin_idx:{continue_idx + idx * batch_size}")
-        preds = model.infer(batch, **test_kwargs)
+            f"predicting data batch:{idx}, batch_size:{len(batch)},origin_idx:{continue_idx + idx * batch_size}")
+        preds = model.predict(batch, **test_kwargs)
         output_data = []
         logger.info(f"generating output_data")
         for item, pred in zip(batch, preds):
             tmp = item.dict()
-            tmp.update(infer=pred)
+            tmp.update(predict=pred)
             output_data.append(tmp)
 
         logger.info(f"dumping {len(output_data)} output data to path:{output_path}")
@@ -65,10 +65,10 @@ def do_infer(model_cls, ckpt_path, data_path, output_path,
 
 
 if __name__ == "__main__":
-    fire.Fire(do_infer)
+    fire.Fire(do_predict)
 
 """
-do_infer.py \
+do_predict.py \
 --model_cls=TFTextClassifyModel \
 --ckpt_path=/nfs/pony/chenhao/experiment/clue_tnews/roberta_wwm_base/model \
 --data_path=/nfs/pony/chenhao/data/clue/tnews/mlm_test.jsonl \

@@ -17,8 +17,9 @@ from abc import ABCMeta, abstractmethod
 from config_ai.evaluate import *
 from config_ai.models import *
 from config_ai.models.core import AIConfigBaseModel
+from config_ai.models.text_classify.common import get_text_classify_output
 from config_ai.schema import *
-from config_ai.utils import print_info, jdumps, get_current_time_str, jdump
+from config_ai.utils import print_info, jdumps, get_current_time_str, jdump, read_config
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def star_print(info):
 
 
 def get_model_config(experiment_config):
-    config_keys = ['tokenizer_config', 'task_config']
+    config_keys = ['task_config', 'nn_model_config']
     rs_config = {k: experiment_config.get(k) for k in config_keys}
     rs_config.update(model_name=experiment_config["common_config"]["model_name"])
     return rs_config
@@ -41,7 +42,7 @@ class BaseExperiment(metaclass=ABCMeta):
 
     def __init__(self, config: dict):
         # set_tf_config()
-        star_print("experiment param:")
+        star_print("experiment config")
         logger.info(jdumps(config))
         self.model: Optional[AIConfigBaseModel] = None
         self.config = config
@@ -49,9 +50,8 @@ class BaseExperiment(metaclass=ABCMeta):
         self.common_config: dict = config['common_config']
         self.model_cls = get_model_class_by_name(self.common_config["model_cls"])
         assert self.model_cls in self.valid_models
-        random_seed = self.common_config.get("default_random_seed", random.randint(0, 1e9))
-        # set_random_seed(random_seed)
-        self.common_config["random_seed"] = random_seed
+        if "seed" not in self.common_config:
+            self.common_config["seed"] = random.randint(0, 1e9)
         self.experiment_dir = self.common_config['experiment_dir']
         self.project_name = self.common_config['project_name']
         self.model_name = self.common_config['model_name']
@@ -67,10 +67,11 @@ class BaseExperiment(metaclass=ABCMeta):
         self.project_dir = os.path.join(self.experiment_dir, self.project_name)
         if "experiment_path" in self.common_config.keys():
             self.experiment_path = self.common_config["experiment_path"]
-        elif self.is_overwrite_experiment:
-            self.experiment_path = os.path.join(self.project_dir, self.model_name)
         else:
-            self.experiment_path = os.path.join(self.project_dir, self.model_name, get_current_time_str())
+            if self.is_overwrite_experiment:
+                self.experiment_path = os.path.join(self.project_dir, self.model_name)
+            else:
+                self.experiment_path = os.path.join(self.project_dir, self.model_name, get_current_time_str())
 
         self.tensorboard_dir = os.path.join(self.project_dir, "tensorboard")
         self.eval_dir = os.path.join(self.experiment_path, "eval")
@@ -82,12 +83,12 @@ class BaseExperiment(metaclass=ABCMeta):
         # load data config
         self.data_config = self.config['data_config']
         self.train_data_path = self.data_config.get('train_data_path')
-        self.dev_data_path = self.data_config.get('dev_data_path')
+        self.eval_data_path = self.data_config.get('eval_data_path')
         self.test_data_path = self.data_config.get('test_data_path')
         # load nn model config
         self.nn_model_config: dict = config.get('nn_model_config', {})
-        # load compile config
-        self.compile_config: Optional[dict] = config.get('compile_config')
+        # # load compile config
+        # self.compile_config: Optional[dict] = config.get('compile_config')
         # load train config
         self.train_config: Optional[dict] = config.get('train_config')
         # load test config
@@ -104,7 +105,7 @@ class BaseExperiment(metaclass=ABCMeta):
             self.model = self.model_cls.load(path=self.ckpt_path, load_type="json", load_nn_model=True)
         # 根据配置，新建一个模型
         else:
-            star_print("initialize nn_model from nn_model config")
+            star_print("initialize model from model config")
             model_config = get_model_config(self.config)
             self.model = self.model_cls(config=model_config)
             self.model.build_model(**self.nn_model_config)
@@ -141,12 +142,14 @@ class BaseExperiment(metaclass=ABCMeta):
     def train_model(self):
         star_print("training phase start")
         assert self.model is not None
-        self.model.compile_model(**self.compile_config)
         callbacks = self._get_callbacks()
+        if "output_dir" not in self.train_config:
+            self.train_config["output_dir"] = os.path.join(self.log_dir, "hf_output/")
+
         self.model.train(train_data=self.train_data_path,
-                         dev_data=self.dev_data_path,
+                         eval_data=self.eval_data_path,
                          callbacks=callbacks,
-                         **self.train_config)
+                         train_kwargs=self.train_config)
         star_print("training phase end")
 
     # 保存模型
@@ -158,20 +161,20 @@ class BaseExperiment(metaclass=ABCMeta):
     # 测试模型
     def test_model(self):
         star_print("testing phase start")
-        for tag, data_path in zip(['train', 'dev', 'test'],
-                                  [self.train_data_path, self.dev_data_path, self.test_data_path]):
+        for tag, data_path in zip(['train', 'eval', 'test'],
+                                  [self.train_data_path, self.eval_data_path, self.test_data_path]):
             if tag not in self.eval_phase_list and tag not in self.output_phase_list:
                 continue
-            logger.info("infer result on {} data:".format(tag))
-            preds = self.model.infer(data=data_path, **self.test_config)
-            examples = self.model.jload_lines(data_path, return_generator=True)
+            logger.info("predict result on {} data:".format(tag))
+            preds = self.model.predict(data=data_path, **self.test_config)
+            examples = self.model.load_examples(data_path, return_generator=False)
             output_data = self.get_output(examples, preds)
             path = os.path.join(self.output_dir, f"{tag}.json")
             logger.info(f"output pred :{len(output_data)} result to {path}")
             jdump(output_data, path)
             if tag in self.eval_phase_list:
                 logger.info("evaluating on {} data".format(tag))
-                examples = self.model.jload_lines(data_path, return_generator=True)
+                examples = self.model.load_examples(data_path, return_generator=False)
                 eval_rs = self.evaluate(examples, preds)
                 logger.info(jdumps(eval_rs))
                 path = os.path.join(self.eval_dir, f"{tag}.json")
@@ -207,18 +210,22 @@ class BaseExperiment(metaclass=ABCMeta):
     @abstractmethod
     def get_output(self, examples: List, preds: List) -> Dict:
         raise NotImplementedError
+
+
 #
 #
-# class TextClassifyExperiment(BaseExperiment):
-#     valid_models = [CLSTokenClassifyModel, MLMTextClassifyModel]
-#
-#     def evaluate(self, examples: List[LabeledTextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
-#         true_labels = [e.label for e in examples]
-#         rs = eval_text_classify(true_labels, preds)
-#         return rs
-#
-#     def get_output(self, examples: List[UnionTextClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
-#         return get_text_classify_output(examples, preds)
+class TextClassifyExperiment(BaseExperiment):
+    valid_models = [CLSTokenClassifyModel]
+
+    def evaluate(self, examples: List[TextClassifyExample], preds: List[LabelOrLabels]) -> Dict:
+        true_labels = [e.label for e in examples]
+        rs = eval_text_classify(true_labels, preds)
+        return rs
+
+    def get_output(self, examples: List[TextClassifyExample], preds: List[LabelOrLabels]) -> List[dict]:
+        return get_text_classify_output(examples, preds)
+
+
 #
 #
 # #
@@ -264,8 +271,8 @@ class BaseExperiment(metaclass=ABCMeta):
 # #
 # # class SPOExtractExperiment(BaseExperiment):
 # #     def evaluate(self, output_data: List[SPOExtractExample]) -> Dict:
-# #         true_target_lists: List[List[SPO]] = [e.true_infer for e in output_data]
-# #         pred_target_lists: List[List[SPO]] = [e.extra_info['infer'] for e in output_data]
+# #         true_target_lists: List[List[SPO]] = [e.true_predict for e in output_data]
+# #         pred_target_lists: List[List[SPO]] = [e.extra_info['predict'] for e in output_data]
 # #         rs = eval_spo_extract_result(true_target_lists, pred_target_lists)
 # #         return rs
 # #
@@ -285,21 +292,23 @@ class BaseExperiment(metaclass=ABCMeta):
 #         return get_seq2seq_output(examples, preds)
 #
 #
-# class ExperimentFactory:
-#     _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
-#                     Seq2SeqExperiment]
-#
-#     _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
-#
-#     @classmethod
-#     def create(cls, config_path: str):
-#         config = read_config(config_path)
-#         model_cls = config["common_config"].get("model_cls")
-#         model_cls = get_model_class_by_name(model_cls)
-#         builder = cls._MODEL2EXPERIMENT.get(model_cls)
-#         if not builder:
-#             raise ValueError(
-#                 f"not valid model_cls:{model_cls}, "
-#                 f"valid model_cls list:{list(cls._MODEL2EXPERIMENT.keys())}"
-#             )
-#         return builder(config)
+class ExperimentFactory:
+    # _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
+    #                 Seq2SeqExperiment]
+
+    _EXPERIMENTS = [TextClassifyExperiment]
+
+    _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
+
+    @classmethod
+    def create(cls, config_path: str):
+        config = read_config(config_path)
+        model_cls = config["common_config"].get("model_cls")
+        model_cls = get_model_class_by_name(model_cls)
+        builder = cls._MODEL2EXPERIMENT.get(model_cls)
+        if not builder:
+            raise ValueError(
+                f"not valid model_cls:{model_cls}, "
+                f"valid model_cls list:{list(cls._MODEL2EXPERIMENT.keys())}"
+            )
+        return builder(config)

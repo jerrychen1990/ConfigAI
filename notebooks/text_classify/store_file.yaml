@@ -1,7 +1,7 @@
 callback_config:
   tensorboard_callback: true
 common_config:
-  base_config: /Users/chenhao/workspace/ConfigAI/examples/base_config.ini
+  base_config: /Users/chenhao/workspace/ConfigAI/examples/base_config_bak.ini
   default_random_seed: 10
   eval_phase_list:
   - train
@@ -25,7 +25,7 @@ compile_config:
     learning_rate: 3.0e-05
   optimizer_name: adam
 data_config:
-  dev_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
+  eval_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
   test_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
   train_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
 nn_model_config:

@@ -122,7 +122,7 @@ class TransformerMLMModel(AbstractMLMClassifyModel, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_infer(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[List[str]]:
+    def _post_predict(self, features, pred_tensors, show_detail=False, threshold=.5) -> List[List[str]]:
         def _tensor2output(feature, pred_tensor):
             # masked_tokens = feature["masked_tokens"]
             # token2char = feature["token2char"]

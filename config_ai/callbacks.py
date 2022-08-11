@@ -53,10 +53,10 @@ logger = logging.getLogger(__name__)
 #         self.experiment = experiment
 #         self.experiment_model: TFBasedModel = experiment.model
 #         self.ckpt_dir = self.experiment.ckpt_dir
-#         self.dev_data_path = self.experiment.dev_data_path
+#         self.eval_data_path = self.experiment.eval_data_path
 #         self.test_config = self.experiment.test_config
 #         self.train_batch_size = self.experiment.train_config["batch_size"]
-#         self.dev_data = self.experiment_model.jload_lines(self.dev_data_path)
+#         self.eval_data = self.experiment_model.jload_lines(self.eval_data_path)
 #         self.monitor = monitor
 #         self.mode = mode
 #         self.save_mode = save_mode
@@ -97,10 +97,10 @@ logger = logging.getLogger(__name__)
 #         if self.monitor:
 #             logger.info(f"evaluate on dev data for step:{self.cur_step}")
 #
-#             pred_data = self.experiment_model.infer(data=self.dev_data_path,
+#             pred_data = self.experiment_model.predict(data=self.eval_data_path,
 #                                                       **self.test_config)
-#             output_data = self.experiment.get_output(self.dev_data, pred_data)
-#             eval_rs = self.experiment.evaluate(self.dev_data, pred_data)
+#             output_data = self.experiment.get_output(self.eval_data, pred_data)
+#             eval_rs = self.experiment.evaluate(self.eval_data, pred_data)
 #             expected_expr = parse(self.monitor)
 #             metric = [a.value for a in expected_expr.find(eval_rs)][0]
 #

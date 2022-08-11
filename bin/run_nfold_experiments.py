@@ -35,9 +35,9 @@ def run_nfold_experiments(n, config_path, worker_num=2, use_history=True):
     labeled_data = []
     if train_data_path:
         labeled_data.extend(jload_lines(train_data_path))
-    dev_data_path = base_config["data_config"].get("dev_data_path")
-    if dev_data_path:
-        labeled_data.extend(jload_lines(dev_data_path))
+    eval_data_path = base_config["data_config"].get("eval_data_path")
+    if eval_data_path:
+        labeled_data.extend(jload_lines(eval_data_path))
     logger.info(f"get {len(labeled_data)} data")
     if not labeled_data:
         logger.info("no labeled data found, exit!")
@@ -50,15 +50,15 @@ def run_nfold_experiments(n, config_path, worker_num=2, use_history=True):
     configs = []
     for idx in range(n):
         train_data_path = os.path.join(data_dir, f"train-{idx}.jsonl")
-        dev_data_path = os.path.join(data_dir, f"dev-{idx}.jsonl")
-        if not os.path.exists(train_data_path) or not os.path.exists(dev_data_path):
-            logger.info(f"dumping data to {train_data_path} and {dev_data_path}...")
+        eval_data_path = os.path.join(data_dir, f"dev-{idx}.jsonl")
+        if not os.path.exists(train_data_path) or not os.path.exists(eval_data_path):
+            logger.info(f"dumping data to {train_data_path} and {eval_data_path}...")
 
-            dev_data = nfolds[idx]
+            eval_data = nfolds[idx]
             train_data = [e for i in range(n) for e in nfolds[i] if i != idx]
             jdump_lines(train_data, train_data_path)
-            jdump_lines(dev_data, dev_data_path)
-        configs.append([f"fold-{idx}", {"data_config.train_data_path": train_data_path, "data_config.dev_data_path": dev_data_path}])
+            jdump_lines(eval_data, eval_data_path)
+        configs.append([f"fold-{idx}", {"data_config.train_data_path": train_data_path, "data_config.eval_data_path": eval_data_path}])
 
     logger.info(jdumps(configs))
     run_batch_experiments(base_config_path=base_config_path, configs=[configs], worker_num=worker_num, use_history=use_history)

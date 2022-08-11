@@ -38,7 +38,7 @@ ConfigAI包含如下功能
 ### 通用配置
 - 配置支持.ini格式和.json格式
 - 配置支持继承,同名的key会用子配置的值覆盖父配置的值
-- [示例配置](examples/base_config.ini)
+- [示例配置](examples/base_config_bak.ini)
 
 ## notebooks
 展示ConfigAI的内部实现，调试时使用

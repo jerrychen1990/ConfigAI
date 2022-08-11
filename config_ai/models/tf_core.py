@@ -73,7 +73,7 @@ def save_keras_model(model: Model, path: str, fmt: str = None, tf_serving_versio
         execute_cmd(cmd)
 
 
-def infer_with_tf_serving(test_batches: Iterable, tf_serving_url, show_detail=False):
+def predict_with_tf_serving(test_batches: Iterable, tf_serving_url, show_detail=False):
     pred_data = []
     for idx, batch in enumerate(test_batches):
         data = {k: v.tolist() for k, v in batch.items()}
@@ -164,7 +164,7 @@ class TFBasedModel(NNBasedModelAIConfig):
         raise Exception(f"no valid model file under path:{path}!")
 
     def train(self, train_data, epochs, batch_size,
-              dev_data=None,
+              eval_data=None,
               callbacks=[], buffer_size=1024, verbose=1, overwrite_cache=False, **kwargs):
         train_data_manager = DataManager.get_instance(model=self, data=train_data)
         train_data_manager.store_features(overwrite_cache=overwrite_cache)
@@ -179,13 +179,13 @@ class TFBasedModel(NNBasedModelAIConfig):
         train_dataset = train_data_manager.get_train_dataset(repeat=None, batch_size=batch_size,
                                                              buffer_size=min(buffer_size, data_size))
 
-        dev_dataset = None
-        if dev_data:
-            dev_data_manager = DataManager.get_instance(model=self, data=dev_data)
-            dev_data_manager.store_features(overwrite_cache=overwrite_cache)
-            dev_dataset = dev_data_manager.get_train_dataset(repeat=1, batch_size=batch_size, buffer_size=None)
+        eval_dataset = None
+        if eval_data:
+            eval_data_manager = DataManager.get_instance(model=self, data=eval_data)
+            eval_data_manager.store_features(overwrite_cache=overwrite_cache)
+            eval_dataset = eval_data_manager.get_train_dataset(repeat=1, batch_size=batch_size, buffer_size=None)
 
-        self.train_model.fit(train_dataset, validation_data=dev_dataset, epochs=epochs, callbacks=callbacks,
+        self.train_model.fit(train_dataset, validation_data=eval_dataset, epochs=epochs, callbacks=callbacks,
                              verbose=verbose, **kwargs)
         logger.info("training finished")
 
@@ -194,15 +194,15 @@ class TFBasedModel(NNBasedModelAIConfig):
         return [record]
 
     @log_cost_time
-    def _model_infer(self, test_batches, model: Model = None, tf_serving_url=None, show_detail=False):
+    def _model_predict(self, test_batches, model: Model = None, tf_serving_url=None, show_detail=False):
 
         if tf_serving_url:
-            logger.info(f"infering with tf server:{tf_serving_url}...")
-            pred_tensor_data = infer_with_tf_serving(test_batches,
+            logger.info(f"predicting with tf server:{tf_serving_url}...")
+            pred_tensor_data = predict_with_tf_serving(test_batches,
                                                        tf_serving_url=tf_serving_url,
                                                        show_detail=show_detail)
         elif model:
-            logger.info("infering with tf model...")
+            logger.info("predicting with tf model...")
             pred_tensor_data = []
             test_batches = tqdm(test_batches) if show_detail else test_batches
             for batch in test_batches:
@@ -214,29 +214,29 @@ class TFBasedModel(NNBasedModelAIConfig):
             raise Exception("neither nn_model or tf_serving_url are given!")
         return pred_tensor_data
 
-    def infer(self, data, batch_size=32, show_detail=False, max_pred_num=None, tf_serving_url=None,
+    def predict(self, data, batch_size=32, show_detail=False, max_pred_num=None, tf_serving_url=None,
                 overwrite_cache=False, **kwargs):
-        logger.debug("infering with kwargs:")
+        logger.debug("predicting with kwargs:")
         logger.debug(jdumps(dict(batch_size=batch_size, show_detail=show_detail, max_pred_num=max_pred_num, **kwargs)))
         data_manager = DataManager.get_instance(model=self, data=data)
         data_manager.store_features(overwrite_cache=overwrite_cache)
-        preds = self._infer(data_manager=data_manager, batch_size=batch_size, show_detail=show_detail,
+        preds = self._predict(data_manager=data_manager, batch_size=batch_size, show_detail=show_detail,
                               max_pred_num=max_pred_num, tf_serving_url=tf_serving_url,
                               **kwargs)
         return preds
 
-    def _infer(self, data_manager: DataManager, batch_size, show_detail, max_pred_num,
+    def _predict(self, data_manager: DataManager, batch_size, show_detail, max_pred_num,
                  tf_serving_url=None, **kwargs) -> List:
         test_batches = data_manager.get_test_batches(batch_size=batch_size, max_num=max_pred_num)
-        pred_tensors = self._model_infer(test_batches=test_batches, model=self.nn_model,
+        pred_tensors = self._model_predict(test_batches=test_batches, model=self.nn_model,
                                            tf_serving_url=tf_serving_url, show_detail=show_detail)
         features = data_manager.get_features()
-        preds = self._post_infer(features=features, pred_tensors=pred_tensors, show_detail=show_detail, **kwargs)
+        preds = self._post_predict(features=features, pred_tensors=pred_tensors, show_detail=show_detail, **kwargs)
         return preds
 
     @abstractmethod
     @log_cost_time
-    def _post_infer(self, features, pred_tensors, show_detail, threshold, **kwargs) -> List:
+    def _post_predict(self, features, pred_tensors, show_detail, threshold, **kwargs) -> List:
         pass
 
     def get_dataset_info(self, mode):

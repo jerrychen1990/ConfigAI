@@ -122,7 +122,7 @@ class GlobalPointerModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_infer(self, features, pred_tensors, show_detail) -> List[TextSpans]:
+    def _post_predict(self, features, pred_tensors, show_detail) -> List[TextSpans]:
         def _tensor2output(feature, pred_tensor) -> TextSpans:
             text_spans = []
             prob_tensor = tf.math.sigmoid(pred_tensor)

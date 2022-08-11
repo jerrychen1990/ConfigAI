@@ -13,6 +13,7 @@
 import re
 
 from configparser import ConfigParser
+from dataclasses import field, fields
 
 import yaml
 from snippets.decorators import *
@@ -129,6 +130,13 @@ def inverse_dict(d: dict, overwrite=False):
     return dict(rs)
 
 
+def safe_build_data_cls(cls, kwargs):
+    _fields = fields(cls)
+    valid_keys = set(e.name for e in _fields)
+    kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+    return cls(**kwargs)
+
+
 def find_span(l, val):
     spans = []
     start = None
@@ -142,3 +150,12 @@ def find_span(l, val):
     if start:
         spans.append((start, len(l)))
     return spans
+
+
+def dlist2ldict(d_list):
+    keys = d_list[0].keys
+    rs = {k: list() for k in keys()}
+    for e in d_list:
+        for k, v in e.items():
+            rs[k].append(v)
+    return rs

@@ -146,7 +146,7 @@ class SeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_infer(self, features, pred_tensors, show_detail, threshold=0.5) -> List[TextSpans]:
+    def _post_predict(self, features, pred_tensors, show_detail, threshold=0.5) -> List[TextSpans]:
         def _tensor2output(feature, pred_tensor) -> TextSpans:
             pred_labels = tensor2labels(pred_tensor, self.multi_label, self.id2label, threshold=threshold)
             tokens = feature["tokens"]

@@ -14,10 +14,13 @@ from typing import List, Dict, Set, Sequence, Any
 
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
-from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan, GenText
+# from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan, GenText
 
 
 # 计算f1
+from config_ai.schema import LabelOrLabels, Label
+
+
 def get_f1(precision, recall):
     f1 = 0. if precision + recall == 0 else 2 * precision * recall / (precision + recall)
     return f1
@@ -87,6 +90,8 @@ def get_macro_avg(set_eval_list):
     return rs_dict
 
 
+#
+#
 # 测评文本分类的结果
 def eval_text_classify(true_labels: List[LabelOrLabels],
                        pred_labels: List[LabelOrLabels]) -> Dict:
@@ -111,53 +116,54 @@ def eval_text_classify(true_labels: List[LabelOrLabels],
     macro_eval_rs = get_macro_avg(set_eval_list)
     rs_dict = dict(detail=detail_dict, micro=micro_eval_rs, macro=macro_eval_rs)
     return rs_dict
+#
+#
+# def get_unique_text_span(text_span: TextSpan):
+#     return text_span.text, text_span.label, text_span.span
+#
+#
+# def eval_text_span_classify(true_spans: TextSpans, pred_spans: TextSpans) -> dict:
+#     assert len(true_spans) == len(pred_spans)
+#     flat_true_spans = [(idx, get_unique_text_span(s)) for idx, spans in enumerate(true_spans) for s in spans]
+#     flat_pred_spans = [(idx, get_unique_text_span(s)) for idx, spans in enumerate(pred_spans) for s in spans]
+#
+#     true_span_dict = group_by(flat_true_spans, key=lambda x: x[1][1])
+#     pred_span_dict = group_by(flat_pred_spans, key=lambda x: x[1][1])
+#
+#     target_type_set = true_span_dict.keys() | pred_span_dict.keys()
+#     detail_dict = dict()
+#     for target_type in target_type_set:
+#         true_spans = set(true_span_dict.get(target_type, []))
+#         pred_spans = set(pred_span_dict.get(target_type, []))
+#         eval_rs = eval_sets(true_spans, pred_spans)
+#         detail_dict[target_type] = eval_rs
+#
+#     detail_dict = dict(OrderedDict(sorted(detail_dict.items(), key=lambda x: x[1]["f1"], reverse=True)))
+#     micro_eval_rs = get_micro_avg(detail_dict.values())
+#     macro_eval_rs = get_macro_avg(detail_dict.values())
+#     rs_dict = dict(detail=detail_dict, micro=micro_eval_rs, macro=macro_eval_rs)
+#     return rs_dict
+#
+#
+# def eval_mlm(masked_tokens_list: List[List[str]], pred_masked_tokens_list: List[List[str]]) -> dict:
+#     assert len(masked_tokens_list) == len(pred_masked_tokens_list)
+#     flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(masked_tokens_list) for t in tokens]
+#     pred_flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(pred_masked_tokens_list) for t in tokens]
+#     token_num = len(pred_flat_masked_tokens_list)
+#     acc_num = len(set(flat_masked_tokens_list) & set(pred_flat_masked_tokens_list))
+#
+#     accuracy = acc_num / token_num if token_num else 0.
+#     return dict(item_num=len(masked_tokens_list), token_num=token_num, accurate_token_num=acc_num, accuracy=accuracy)
+#
+#
+# def eval_seq2seq(tgt_texts: List[GenText], gen_texts_list: List[List[GenText]]) -> dict:
+#     bleu_list = [sentence_bleu(references=[tgt_text.text], hypothesis=gen_texts[0].text,
+#                                smoothing_function=SmoothingFunction().method1) for tgt_text, gen_texts in
+#                  zip(tgt_texts, gen_texts_list)]
+#     eval_dict = dict(example_num=len(bleu_list), bleu=sum(bleu_list) / len(bleu_list))
+#
+#     return eval_dict
 
 
-def get_unique_text_span(text_span: TextSpan):
-    return text_span.text, text_span.label, text_span.span
-
-
-def eval_text_span_classify(true_spans: TextSpans, pred_spans: TextSpans) -> dict:
-    assert len(true_spans) == len(pred_spans)
-    flat_true_spans = [(idx, get_unique_text_span(s)) for idx, spans in enumerate(true_spans) for s in spans]
-    flat_pred_spans = [(idx, get_unique_text_span(s)) for idx, spans in enumerate(pred_spans) for s in spans]
-
-    true_span_dict = group_by(flat_true_spans, key=lambda x: x[1][1])
-    pred_span_dict = group_by(flat_pred_spans, key=lambda x: x[1][1])
-
-    target_type_set = true_span_dict.keys() | pred_span_dict.keys()
-    detail_dict = dict()
-    for target_type in target_type_set:
-        true_spans = set(true_span_dict.get(target_type, []))
-        pred_spans = set(pred_span_dict.get(target_type, []))
-        eval_rs = eval_sets(true_spans, pred_spans)
-        detail_dict[target_type] = eval_rs
-
-    detail_dict = dict(OrderedDict(sorted(detail_dict.items(), key=lambda x: x[1]["f1"], reverse=True)))
-    micro_eval_rs = get_micro_avg(detail_dict.values())
-    macro_eval_rs = get_macro_avg(detail_dict.values())
-    rs_dict = dict(detail=detail_dict, micro=micro_eval_rs, macro=macro_eval_rs)
-    return rs_dict
-
-
-def eval_mlm(masked_tokens_list: List[List[str]], pred_masked_tokens_list: List[List[str]]) -> dict:
-    assert len(masked_tokens_list) == len(pred_masked_tokens_list)
-    flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(masked_tokens_list) for t in tokens]
-    pred_flat_masked_tokens_list = [(id, t) for idx, tokens in enumerate(pred_masked_tokens_list) for t in tokens]
-    token_num = len(pred_flat_masked_tokens_list)
-    acc_num = len(set(flat_masked_tokens_list) & set(pred_flat_masked_tokens_list))
-
-    accuracy = acc_num / token_num if token_num else 0.
-    return dict(item_num=len(masked_tokens_list), token_num=token_num, accurate_token_num=acc_num, accuracy=accuracy)
-
-
-def eval_seq2seq(tgt_texts: List[GenText], gen_texts_list: List[List[GenText]]) -> dict:
-    bleu_list = [sentence_bleu(references=[tgt_text.text], hypothesis=gen_texts[0].text,
-                               smoothing_function=SmoothingFunction().method1) for tgt_text, gen_texts in
-                 zip(tgt_texts, gen_texts_list)]
-    eval_dict = dict(example_num=len(bleu_list), bleu=sum(bleu_list) / len(bleu_list))
-
-    return eval_dict
-
-
-eval_relation_classify = eval_text_classify
+# eval_relation_classify = eval_text_classify
+#

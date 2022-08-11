@@ -31,7 +31,7 @@ def get_seq2seq_output(examples: List[Seq2SeqExample],
 
     for example, pred in zip(examples, preds):
         rs_item = example.dict(exclude_none=True, exclude_defaults=True)
-        rs_item.update(infer=pred)
+        rs_item.update(predict=pred)
         rs_list.append(rs_item)
     return rs_list
 
@@ -49,7 +49,7 @@ class BeamSearcher:
             if not records:
                 logger.info("no valid record for further generating, break looping")
                 break
-            preds = self.infer(records=records, topk=beam_size, **kwargs)
+            preds = self.predict(records=records, topk=beam_size, **kwargs)
             assert len(preds) == len(records)
             records = self.update_records(records, preds)
             records = self.groupby_records(records=records, beam_size=beam_size, show_detail=show_detail)
@@ -118,12 +118,12 @@ class BeamSearcher:
         return rs_records
 
     @log_cost_time
-    def infer(self, records, topk, **kwargs) -> Iterable:
+    def predict(self, records, topk, **kwargs) -> Iterable:
         return self.pred_func(records=records, topk=topk, **kwargs)
 
 
-def random_infer(records, topk) -> Iterable:
-    logger.info("infering...")
+def random_predict(records, topk) -> Iterable:
+    logger.info("predicting...")
     preds = []
     for _ in records:
         pred = []
@@ -136,7 +136,7 @@ def random_infer(records, topk) -> Iterable:
     return preds
 
 
-RANDOM_BEAM_SEARCHER = BeamSearcher(pred_func=random_infer)
+RANDOM_BEAM_SEARCHER = BeamSearcher(pred_func=random_predict)
 
 
 class AbstractSeq2SeqModel(AIConfigBaseModel, ABC):

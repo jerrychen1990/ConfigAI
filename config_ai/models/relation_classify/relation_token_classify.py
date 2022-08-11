@@ -179,7 +179,7 @@ class RelationTokenClassifyModel(AbstractRelationClassifyModel, TFBasedModel):
 
     @discard_kwarg
     @log_cost_time
-    def _post_infer(self, pred_tensors, show_detail=False, threshold=0.5) -> List[LabelOrLabels]:
+    def _post_predict(self, pred_tensors, show_detail=False, threshold=0.5) -> List[LabelOrLabels]:
         def _tensor2output(pred_tensor) -> LabelOrLabels:
             if self.multi_label:
                 if show_detail:
