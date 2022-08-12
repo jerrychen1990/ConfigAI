@@ -37,7 +37,7 @@ class CLSTokenClassifyModel(AbstractTextClassifyModel, HuggingfaceBaseModel):
         self.label_num = len(self.label2id)
 
     def build_model(self, **kwargs):
-        self.nn_model = self.auto_model_cls.from_pretrained(self.pretrained_model_path, num_labels=self.label_num)
+        self.nn_model = self.auto_model_cls.from_pretrained(self.pretrained_model_path, id2label=self.id2label)
         return self.nn_model
 
     def _train_preprocess(self, examples: List[Dict], truncation=True):
@@ -50,6 +50,4 @@ class CLSTokenClassifyModel(AbstractTextClassifyModel, HuggingfaceBaseModel):
         return example.text
 
     def _predict_postprocess(self, pred) -> LabelOrLabels:
-        label_id = int(pred["label"].split("_")[1])
-        name = self.id2label[label_id]
-        return Label(name=name, scoore=pred["score"])
+        return Label(name=pred["label"], scoore=pred["score"])

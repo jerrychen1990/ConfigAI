@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 cmd_pattern = '''yudctl run -t {tag} -g={g_num} -d=24h -m=40 \
 -i=registry.cn-hangzhou.aliyuncs.com/eigenlab/config-ai:tf2.2 \
--p=/nfs/pony/chenhao/workspace/ConfigAI \
+-p=${CONFIG_AI_PATH} \
 -u=chenhao \
 -r=requirements.txt \
 -y \

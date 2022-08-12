@@ -6,7 +6,7 @@
         }
     },
     "task_config": {
-        "label_path": "/nfs/pony/chenhao/workspace/ConfigAI/examples/text_classify/data/labels.txt",
+        "label_path": "${CONFIG_AI_PATH}/examples/text_classify/data/labels.txt",
         "max_len": 128,
         "multi_label": false
     },

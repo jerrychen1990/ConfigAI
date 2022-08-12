@@ -13,21 +13,31 @@ from typing import List, Dict
 import pandas as pd
 import torch
 from datasets import Dataset, DatasetDict
-from snippets import ensure_dir_path
-from transformers import AutoTokenizer, TrainingArguments, DataCollatorWithPadding, Trainer
+from snippets import ensure_dir_path, jdumps
+from transformers import AutoTokenizer, TrainingArguments, DataCollatorWithPadding, Trainer, \
+    DataCollatorForTokenClassification
 from transformers import pipeline
 
 from config_ai.models import AIConfigBaseModel
-from config_ai.schema import Example
+from config_ai.schema import Example, Task
 from config_ai.utils import safe_build_data_cls
 
 logger = logging.getLogger(__name__)
+
+_task_map = {
+    Task.TEXT_CLS: ("text-classification", DataCollatorWithPadding),
+    Task.TEXT_SPAN_CLS: ("token-classification", DataCollatorForTokenClassification)
+}
 
 
 class HuggingfaceBaseModel(AIConfigBaseModel):
     """
     底层包含Neural Network的model
     """
+
+    def __new__(cls, *args, **kwargs):
+        cls.hf_task, cls.collator_cls = _task_map[cls.task]
+        return super().__new__(cls)
 
     def __init__(self, config):
         super().__init__(config)
@@ -102,9 +112,10 @@ class HuggingfaceBaseModel(AIConfigBaseModel):
         training_args = safe_build_data_cls(
             TrainingArguments, train_kwargs
         )
+        # logger.info("train dataset features:")
+        # logger.info(jdumps(_datasets["train_dataset"].features))
 
-        # logger.info(_datasets["train_dataset"][0])
-        data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
+        data_collator = self.collator_cls(tokenizer=self.tokenizer, padding=True)
         trainer = Trainer(
             model=self.nn_model,
             args=training_args,
@@ -119,7 +130,7 @@ class HuggingfaceBaseModel(AIConfigBaseModel):
             data = self.load_examples(data_path=data)
         data = [self._predict_preprocess(e) for e in data]
         # logger.info(data)
-        pred_cls = pipeline(task=self.task.hf_task, model=self.nn_model, tokenizer=self.tokenizer, device=0)
+        pred_cls = pipeline(task=self.hf_task, model=self.nn_model, tokenizer=self.tokenizer, device=0)
         # logger.info(pred_cls)
         preds = pred_cls(data)
         # logger.info(preds)

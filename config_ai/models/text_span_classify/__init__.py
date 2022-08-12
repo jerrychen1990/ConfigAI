@@ -12,5 +12,5 @@
 """
 from config_ai.models.text_span_classify.common import AbstractTextSpanClassifyModelAIConfig
 from config_ai.models.text_span_classify.seq_labeling import SeqLabelingModel
-from config_ai.models.text_span_classify.global_pointer import GlobalPointerModel
+# from config_ai.models.text_span_classify.global_pointer import GlobalPointerModel
 

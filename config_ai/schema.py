@@ -55,38 +55,20 @@ class TextClassifyExample(TextExample):
     label: Optional[LabelOrLabels] = Field(description="Ground Truth, 训练数据有此字段")
 
 
-class Task(Enum):
-    TEXT_CLS = ("text-classification", TextClassifyExample, LabelOrLabels)
-
-    def __init__(self, hf_task, input_cls, output_cls):
-        self.hf_task = hf_task
-        self.input_cls = input_cls
-        self.output_cls = output_cls
-
-#
-#
-#
 # 文本片段
-# class TextSpan(HashableModel):
-#     text: str = Field(description="文本片段内容")
-#     span: Tuple[int, int] = Field(description="文本片段的下标区间，前闭后开")
-#     label: str = Field(default="片段标签")
-#     prob: float = Field(description="文本片段分类的概率值", default=1., ge=0., le=1.)
+class TextSpan(HashableModel):
+    text: str = Field(description="文本片段内容")
+    span: Tuple[int, int] = Field(description="文本片段的下标区间，前闭后开")
+    label: Label = Field(default="片段标签")
+
+
+TextSpans = List[TextSpan]
+
+
 #
-#
-# TextSpans = List[TextSpan]
-#
-#
-# # 文本片段分类数据
-# class TextSpanClassifyExample(TextExample):
-#     pass
-#
-#
-# class LabeledTextSpanClassifyExample(TextSpanClassifyExample):
-#     text_spans: TextSpans = Field(description="文本片段列表")
-#
-#
-# UnionTextSpanClassifyExample = Union[LabeledTextSpanClassifyExample, TextSpanClassifyExample]
+# 文本片段分类模型输入
+class TextSpanClassifyExample(TextExample):
+    text_spans: Optional[TextSpans] = Field(description="Ground Truth， 训练数据有此字段")
 
 
 #
@@ -128,3 +110,12 @@ class Task(Enum):
 #
 # #
 # UnionSeq2SeqExample = Union[LabeledSeq2SeqExample, Seq2SeqExample]
+
+
+class Task(Enum):
+    TEXT_CLS = (TextClassifyExample, LabelOrLabels)
+    TEXT_SPAN_CLS = (TextSpanClassifyExample, TextSpans)
+
+    def __init__(self, input_cls, output_cls):
+        self.input_cls = input_cls
+        self.output_cls = output_cls

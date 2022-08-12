@@ -18,15 +18,22 @@ from typing import Iterable
 
 from snippets import jdumps, jdump, jload, ensure_dir_path, jload_lines
 
+from config_ai.schema import Task
+
 logger = logging.getLogger(__name__)
 
 
 class AIConfigBaseModel(ABC, object):
-    task = None
+    task: Task = None
     """
     所有model的一个基类，可以用底层可以是一个nn model，可以是一个规则系统，也可以是多个其他model构成的pipeline
     一个model用来解决一类给定输入输出的问题
     """
+
+    def __new__(cls, *args, **kwargs):
+        cls.input_cls = cls.task.input_cls
+        cls.output_cls = cls.task.output_cls
+        return super().__new__(cls)
 
     # 读取配置文件，init一个model实体
     def __init__(self, config):

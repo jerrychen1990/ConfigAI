@@ -25,14 +25,14 @@ compile_config:
     learning_rate: 3.0e-05
   optimizer_name: adam
 data_config:
-  eval_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
-  test_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
-  train_data_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labeled.jsonl
+  eval_data_path: ${CONFIG_AI_PATH}/data/sentiment_classify/labeled.jsonl
+  test_data_path: ${CONFIG_AI_PATH}/data/sentiment_classify/labeled.jsonl
+  train_data_path: ${CONFIG_AI_PATH}/data/sentiment_classify/labeled.jsonl
 nn_model_config:
   pretrained_model_path: /nfs/pony/chenhao/pretrain/chinese_rbt4_L-4_H-768_A-12
   pretrained_model_tag: bert
 task_config:
-  label_path: /nfs/pony/chenhao/workspace/ConfigAI/data/sentiment_classify/labels.txt
+  label_path: ${CONFIG_AI_PATH}/data/sentiment_classify/labels.txt
   max_len: 128
   multi_label: false
 test_config:
