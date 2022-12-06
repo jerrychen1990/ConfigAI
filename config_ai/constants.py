@@ -16,7 +16,7 @@ EMPTY_LABEL = "EMPTY"
 
 # 模型保存相关常量
 CONFIG_FILE_NAME = "config.json"
-NN_MODEL_DIR_NAME= "nn_model"
-H5_FILE_NAME= "nn_model.h5"
+NN_MODEL_DIR_NAME = "nn_model"
+H5_FILE_NAME = "nn_model.h5"
 OSS_CONFIG_FILE_NAME = "oss_config.json"
 TF_SERVING_DIR_NAME = "tf_serving_model"

@@ -18,6 +18,8 @@ from config_ai.evaluate import *
 from config_ai.models import *
 from config_ai.models.core import AIConfigBaseModel
 from config_ai.models.text_classify.common import get_text_classify_output
+from config_ai.models.text_span_classify import SeqLabelingModel
+from config_ai.models.text_span_classify.common import get_text_span_classify_output
 from config_ai.schema import *
 from config_ai.utils import print_info, jdumps, get_current_time_str, jdump, read_config
 
@@ -229,16 +231,18 @@ class TextClassifyExperiment(BaseExperiment):
 #
 #
 # #
-# class TextSpanClassifyExperiment(BaseExperiment):
-#     valid_models = [SeqLabelingModel, GlobalPointerModel]
-#
-#     def evaluate(self, examples: List[LabeledTextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
-#         true_text_spans = [e.text_spans for e in examples]
-#         rs = eval_text_span_classify(true_text_spans, preds)
-#         return rs
-#
-#     def get_output(self, examples: List[UnionTextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
-#         return get_text_span_classify_output(examples, preds)
+class TextSpanClassifyExperiment(BaseExperiment):
+    valid_models = [SeqLabelingModel]
+
+    def evaluate(self, examples: List[TextSpanClassifyExample], preds: List[TextSpans]) -> Dict:
+        true_text_spans = [e.text_spans for e in examples]
+        rs = eval_text_span_classify(true_text_spans, preds)
+        return rs
+
+    def get_output(self, examples: List[TextSpanClassifyExample], preds: List[TextSpans]) -> List[dict]:
+        return get_text_span_classify_output(examples, preds)
+
+
 #
 #
 # #
@@ -296,7 +300,7 @@ class ExperimentFactory:
     # _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment, RelationClassifyExperiment, MLMExperiment,
     #                 Seq2SeqExperiment]
 
-    _EXPERIMENTS = [TextClassifyExperiment]
+    _EXPERIMENTS = [TextClassifyExperiment, TextSpanClassifyExperiment]
 
     _MODEL2EXPERIMENT = {model: experiment for experiment in _EXPERIMENTS for model in experiment.valid_models}
 

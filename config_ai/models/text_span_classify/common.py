@@ -13,17 +13,15 @@
 
 import logging
 from abc import ABC
-from enum import Enum, unique
-from typing import List, Tuple, Set, Dict
-from snippets import load_lines
+from typing import List, Tuple
 
 import tensorflow as tf
-from config_ai.schema import TextSpanClassifyExample, TextSpan, TextSpans, Task
 
 from config_ai.backend import apply_threshold, n_hot2idx_tensor
+from config_ai.evaluate import get_tp_fp_fn_set, get_unique_text_span
 from config_ai.models.core import AIConfigBaseModel
 from config_ai.models.text_classify.common import multi_label2id_vector
-from config_ai.evaluate import get_tp_fp_fn_set
+from config_ai.schema import TextSpanClassifyExample, TextSpans, Task
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +45,6 @@ def tensor2labels(tensor, multi_label, id2label, threshold=.5) -> List[Tuple[str
     return pred_data
 
 
-def get_unique_text_span(text_span: TextSpan):
-    return text_span.text, text_span.label, text_span.span
-
-
 # 将token_label编码成分类的vector形式
 def token_label2classify_label_input(target_token_label_sequence, multi_label, label2id):
     if multi_label:
@@ -66,7 +60,7 @@ def get_text_span_classify_output(examples: List[TextSpanClassifyExample], preds
     output = []
     for example, pred in zip(examples, preds):
         rs_item = example.dict(exclude_none=True)
-        rs_item.update(predict=pred)
+        rs_item.update(predict=[e.dict(exclude_none=True) for e in pred])
         if example:
             true_set = set([get_unique_text_span(s) for s in example.text_spans])
             pred_set = set([get_unique_text_span(s) for s in pred])

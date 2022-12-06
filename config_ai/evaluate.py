@@ -12,14 +12,8 @@ from collections import OrderedDict, defaultdict
 
 from typing import List, Dict, Set, Sequence, Any
 
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-
-# from config_ai.schema import Label, LabelOrLabels, TextSpans, TextSpan, GenText
-
-
 # 计算f1
-from config_ai.models.text_span_classify.common import get_unique_text_span
-from config_ai.schema import LabelOrLabels, Label, TextSpans
+from config_ai.schema import LabelOrLabels, Label, TextSpans, TextSpan
 
 
 def get_f1(precision, recall):
@@ -61,6 +55,10 @@ def label2set(label: LabelOrLabels) -> Set[str]:
     if isinstance(label, Label):
         return set([label.name])
     return set([l.name for l in label])
+
+
+def get_unique_text_span(text_span: TextSpan):
+    return text_span.text, text_span.label.name, text_span.span
 
 
 def group_by(seq: Sequence, key=lambda x: x, map_func=lambda x: x) -> Dict[Any, List]:

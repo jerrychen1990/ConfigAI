@@ -14,7 +14,7 @@ import logging
 from enum import unique, Enum
 from typing import Dict, List, Tuple, Set
 
-from snippets import seq2dict, load_lines
+from snippets import seq2dict, load_lines, jdumps
 from transformers import AutoModelForTokenClassification
 
 from config_ai.models.huggingface_core import HuggingfaceBaseModel
@@ -314,8 +314,9 @@ def decode_hf_entities(pred: List[dict], seq_label_strategy: SeqLabelStrategy) -
             cur_type, acc = gather()
 
         if label_part in [seq_label_strategy.single, seq_label_strategy.begin]:
+            cur_type, acc = gather()
             cur_type = label_type
-            acc = [item]
+            acc.append(item)
 
         if label_part in [seq_label_strategy.single, seq_label_strategy.end]:
             cur_type, acc = gather()
@@ -364,10 +365,15 @@ class SeqLabelingModel(AbstractTextSpanClassifyModelAIConfig, HuggingfaceBaseMod
         rs.update(labels=ner_tag, tokens=tokens)
         return rs
 
-    def _predict_preprocess(self, example: TextSpanClassifyExample):
+    def _predict_preprocess(self, example: TextSpanClassifyExample, show_detail=False):
         return example.text
 
-    def _predict_postprocess(self, pred) -> TextSpans:
+    def _predict_postprocess(self, pred, show_detail=False) -> TextSpans:
+        if show_detail:
+            logger.info(f"hf preds : {jdumps(pred)}")
+
+
+
         text_spans = decode_hf_entities(pred, self.seq_label_strategy)
         return text_spans
 

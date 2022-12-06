@@ -17,7 +17,7 @@ from typing import Set, List, Dict
 from config_ai.constants import EMPTY_LABEL
 from config_ai.evaluate import label2set, get_tp_fp_fn_set
 from config_ai.models.core import AIConfigBaseModel
-from config_ai.schema import Task, TextClassifyExample, LabelOrLabels, Label
+from config_ai.schema import Task, TextClassifyExample, LabelOrLabels
 
 logger = logging.getLogger(__name__)
 

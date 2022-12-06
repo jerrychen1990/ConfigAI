@@ -46,6 +46,9 @@ class HuggingfaceBaseModel(AIConfigBaseModel):
         self.pretrained_model_path = os.path.join(os.environ.get("PRETRAIN_HOME", ""), self.pretrained_model_name)
         self.max_len = self.task_config["max_len"]
         self._init_tokenizer()
+        # todo class级别的属性，如何初始化？
+        self.hf_task, self.collator_cls = _task_map[self.task]
+
 
     def _init_tokenizer(self):
         logger.info(f"initializing tokenizer with pretrain_model:{self.pretrained_model_path}...")
@@ -66,11 +69,11 @@ class HuggingfaceBaseModel(AIConfigBaseModel):
         raise NotImplementedError
 
     @abstractmethod
-    def _predict_preprocess(self, example: Example):
+    def _predict_preprocess(self, example: Example, show_detail=False):
         raise NotImplementedError
 
     @abstractmethod
-    def _predict_postprocess(self, pred):
+    def _predict_postprocess(self, pred, show_detail=False):
         raise NotImplementedError
 
     @ensure_dir_path
@@ -125,15 +128,15 @@ class HuggingfaceBaseModel(AIConfigBaseModel):
         logger.info("training starts")
         trainer.train()
 
-    def predict(self, data, **kwargs):
+    def predict(self, data, show_detail=False, **kwargs):
         if isinstance(data, str):
             data = self.load_examples(data_path=data)
-        data = [self._predict_preprocess(e) for e in data]
+        data = [self._predict_preprocess(e, show_detail=show_detail) for e in data]
         # logger.info(data)
         pred_cls = pipeline(task=self.hf_task, model=self.nn_model, tokenizer=self.tokenizer, device=0)
         # logger.info(pred_cls)
         preds = pred_cls(data)
         # logger.info(preds)
 
-        preds = [self._predict_postprocess(e) for e in preds]
+        preds = [self._predict_postprocess(e, show_detail=show_detail) for e in preds]
         return preds

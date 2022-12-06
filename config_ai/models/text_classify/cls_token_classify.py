@@ -46,8 +46,8 @@ class CLSTokenClassifyModel(AbstractTextClassifyModel, HuggingfaceBaseModel):
 
         return rs
 
-    def _predict_preprocess(self, example: TextClassifyExample):
+    def _predict_preprocess(self, example: TextClassifyExample, show_detail=False):
         return example.text
 
-    def _predict_postprocess(self, pred) -> LabelOrLabels:
+    def _predict_postprocess(self, pred, show_detail=False) -> LabelOrLabels:
         return Label(name=pred["label"], scoore=pred["score"])
